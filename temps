@@ -13,3 +13,4 @@ echo "-------------------------------------------"
 printf "GPU %3.2f C\n" $gpu
 printf "CPU %3.2f C\n" $cpu
 
+

@@ -94,3 +94,4 @@ egrep -i "fail|error|warn" /var/log/messages /var/log/boot.log /var/log/secure /
 
 echo ; echo "Date collected "`date`
 
+

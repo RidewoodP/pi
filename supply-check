@@ -66,3 +66,4 @@ while true; do
     echo "$temp $sys_clock_speed / $real_clock_speed MHz $voltage - $throttled_text"
     sleep 5
 done
+

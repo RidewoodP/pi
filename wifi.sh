@@ -16,3 +16,4 @@ printf "%s,%.1f,%.1f\n" "${NDATE}" $QUAL $LEVL
 #printf "%s,$.2f,%.2f\n" ${NDATE},${QUAL},${LEVL}
 
 exit
+
