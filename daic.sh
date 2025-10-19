@@ -86,13 +86,15 @@ ss -ntlp | sed 's/^/SERVICES: /' | column -t
 echo
 
 
-echo ; echo RPM:
+echo
 echo "RPM: Name;Version;Install date;Vendor;Build"
-rpm -qa --queryformat "RPM: %{name};%{version}-%{release}-%{ARCH};%{installtime:date};%{vendor};%{buildhost}\n" 2>/dev/null | sort -k2 -t" "
+{
+    printf "Name;Version;Install date;Vendor;Build\n"
+    rpm -qa --queryformat "%{name};%{version}-%{release}-%{ARCH};%{installtime:date};%{vendor};%{buildhost}\n" 2>/dev/null
+} | LC_ALL=C sort -t";" -k1,1 | column -s";" -t
 
 echo ; echo "ERROR: Error messages"
-egrep -i "fail|error|warn" /var/log/messages /var/log/boot.log /var/log/secure /var/log/kernel 2>/dev/null | sed 's/^/ERROR: /'
-
-echo ; echo "Date collected "`date`
-
-
+TODAY="$(date '+%b %e')"
+grep -Ei "^${TODAY}.*(fail|error|warn)" /var/log/messages /var/log/secure /var/log/kernel 2>/dev/null | sed 's/^/ERROR: /'
+grep -Ei ".*(fail|error|warn)" /var/log/boot.log 2>/dev/null | sed 's/^/ERROR: /'
+echo ; echo "Date collected $(date)"
