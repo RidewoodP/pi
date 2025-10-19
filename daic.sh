@@ -67,6 +67,7 @@ getent passwd | awk -F : '{if ($3>99){print $0}}' | sed 's/^/USERS: /'
 echo ; echo "SUDO info, who can do what"
 grep -E  -v "^(#|$)" /etc/sudoers /etc/sudoers.d/* 2>/dev/null | grep -v :Default | column -t | sed 's/^/SUDO: /'
 
+# shellcheck disable=SC2013
 for GG in $(grep -h ^% /etc/sudoers /etc/sudoers.d/* 2>/dev/null | sed 's/^\%\([^[:space:]]*\)[[:space:]]*.*/\1/')
 do  getent group ${GG}
 done | sed 's/^/SUDO: GROUPS: /'
@@ -76,7 +77,6 @@ if ! command -v ntpq >/dev/null 2>&1 ; then
     echo "NTP: ntpq command not found"
 else
     grep -E  "^(peer|server)" /etc/ntp.conf | sed 's/^/NTP: /'
-    
 fi
 
 echo ; echo SECURITY: various setting
