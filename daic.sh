@@ -45,9 +45,6 @@ if [ -f /usr/sbin/omreport ] ; then
     echo ;  echo "DELL: Hardware check - System temps"
     /usr/sbin/omreport chassis temps | grep -E -A3 "Index.*[0-9]"                     | sed 's/^/DELL: /'
     
-    
-    #echo ; echo ; echo "DELL: Hardware check  - HW Summary "
-    #/usr/sbin/omreport system summary                                               | sed 's/^/DELL: /'
     echo
 else
     echo "DELL: Hardware application not installed/applicable"                      | sed 's/^/DELL: /'
@@ -69,7 +66,7 @@ grep -E  -v "^(#|$)" /etc/sudoers /etc/sudoers.d/* 2>/dev/null | grep -v :Defaul
 
 # shellcheck disable=SC2013
 for GG in $(grep -h ^% /etc/sudoers /etc/sudoers.d/* 2>/dev/null | sed 's/^\%\([^[:space:]]*\)[[:space:]]*.*/\1/')
-do  getent group ${GG}
+do  getent group "${GG}"
 done | sed 's/^/SUDO: GROUPS: /'
 
 echo ; echo "NTP: conf (peers and servers only)"
