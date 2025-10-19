@@ -30,20 +30,20 @@ df -hPl 2>/dev/null | column -t | sed 's/^/DISK_USAGE: /'
 echo ; echo "DELL: Hardware check"
 if [ -f /usr/sbin/omreport ] ; then
     echo ;  echo "DELL: Hardware check - Physical Disk Status"
-    /usr/sbin/omreport storage pdisk controller=0|egrep "^ID |Status|State|Failure" | sed 's/^/DELL: /'
+    /usr/sbin/omreport storage pdisk controller=0|grep -E "^ID |Status|State|Failure" | sed 's/^/DELL: /'
     
     echo ;  echo "DELL: Hardware check - Logical  Disk Status"
-    /usr/sbin/omreport storage vdisk|egrep "^Name|State|Write|Read"                 | sed 's/^/DELL: /'
+    /usr/sbin/omreport storage vdisk|grep -E "^Name|State|Write|Read"                 | sed 's/^/DELL: /'
     
     echo ;  echo "DELL: Hardware check - Controler Status"
-    /usr/sbin/omreport storage controller|egrep "^ID|^State|^Status|^Firmware"      | sed 's/^/DELL: /'
+    /usr/sbin/omreport storage controller|grep -E "^ID|^State|^Status|^Firmware"      | sed 's/^/DELL: /'
     
     
     echo ;  echo "DELL: Hardware check - System Memory Status"
-    /usr/sbin/omreport chassis memory | egrep -A4 "Index.*[0-9]"                    | sed 's/^/DELL: /'
+    /usr/sbin/omreport chassis memory | grep -E -A4 "Index.*[0-9]"                    | sed 's/^/DELL: /'
     
     echo ;  echo "DELL: Hardware check - System temps"
-    /usr/sbin/omreport chassis temps | egrep -A3 "Index.*[0-9]"                     | sed 's/^/DELL: /'
+    /usr/sbin/omreport chassis temps | grep -E -A3 "Index.*[0-9]"                     | sed 's/^/DELL: /'
     
     
     #echo ; echo ; echo "DELL: Hardware check  - HW Summary "
@@ -54,7 +54,7 @@ else
 fi
 
 echo ; echo IP_INFO: Information
-for II in $(ls -1 /sys/class/net/ | egrep -wv "lo|bonding_masters" ) ; do
+for II in $(ls -1 /sys/class/net/ | grep -Ewv "lo|bonding_masters" ) ; do
     ip a show ${II} 2>/dev/null
 done | sed 's/^/IP_INFO: /'
 
@@ -65,14 +65,19 @@ echo ; echo "USERS: (ID>99)"
 getent passwd | awk -F : '{if ($3>99){print $0}}' | sed 's/^/USERS: /'
 
 echo ; echo "SUDO info, who can do what"
-egrep -v "^(#|$)" /etc/sudoers /etc/sudoers.d/* 2>/dev/null | grep -v :Default | column -t | sed 's/^/SUDO: /'
+grep -E  -v "^(#|$)" /etc/sudoers /etc/sudoers.d/* 2>/dev/null | grep -v :Default | column -t | sed 's/^/SUDO: /'
 
 for GG in $(grep -h ^% /etc/sudoers /etc/sudoers.d/* 2>/dev/null | sed 's/^\%\([^[:space:]]*\)[[:space:]]*.*/\1/')
 do  getent group ${GG}
 done | sed 's/^/SUDO: GROUPS: /'
 
 echo ; echo "NTP: conf (peers and servers only)"
-egrep "^(peer|server)" /etc/ntp.conf | sed 's/^/NTP: /'
+if ! command -v ntpq >/dev/null 2>&1 ; then
+    echo "NTP: ntpq command not found"
+else
+    grep -E  "^(peer|server)" /etc/ntp.conf | sed 's/^/NTP: /'
+    
+fi
 
 echo ; echo SECURITY: various setting
 openssl ciphers -v | awk '{print $2}' | sort -u | sed 's/^/SECURITY: SSL: /'
