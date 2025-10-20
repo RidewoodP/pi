@@ -1,8 +1,16 @@
 #!/bin/bash
 # Script: my-pi-temp.sh
 # Purpose: Display the ARM CPU and GPU  temperature of Raspberry Pi 2/3
-# Author: Vivek Gite <www.cyberciti.biz> under GPL v2.x+
+# and other system information like disk and memory utilization,
+# outstanding updates and system uptime.
+# Tested OS: Raspbian, Raspberry Pi OS
 # -------------------------------------------------------
+
+# variables
+
+# minimal disk space check
+MINDISK=10  # in percent
+
 cpu=$(</sys/class/thermal/thermal_zone0/temp)
 cpu=$((cpu/1000))
 gpu=$(vcgencmd measure_temp | sed 's/temp=\(.*\).C/\1/')
@@ -12,3 +20,27 @@ echo "-------------------------------------------"
 
 printf "GPU %3.2f C\n" $gpu
 printf "CPU %3.2f C\n" $cpu
+
+# disk utilization, check more than MINDISK percent used
+echo "-------------------------------------------"
+df -h | awk -v mindisk=$MINDISK 'NR==1 || $5+0 > mindisk {print}'
+
+
+# memory utilization
+echo "-------------------------------------------"
+free -h | grep -E 'Mem|Swap'
+
+# outstanding updates
+echo "-------------------------------------------"
+if [ -f /usr/bin/apt-get ]; then
+    echo "Outstanding updates:"
+    apt-get -s upgrade | grep -E '^(Inst|Conf)' | wc -l
+else
+    echo "Package manager apt-get not found."
+fi
+
+
+# system uptime
+echo "-------------------------------------------"
+uptime
+echo "-------------------------------------------"

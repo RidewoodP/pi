@@ -52,7 +52,7 @@ fi
 
 echo ; echo IP_INFO: Information
 for II in $(ls -1 /sys/class/net/ | grep -Ewv "lo|bonding_masters" ) ; do
-    ip a show ${II} 2>/dev/null
+    ip a show "${II}" 2>/dev/null
 done | sed 's/^/IP_INFO: /'
 
 echo ; echo ROUTING: Route Table
