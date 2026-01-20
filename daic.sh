@@ -51,9 +51,9 @@ else
 fi
 
 echo ; echo IP_INFO: Information
-for II in $(ls -1 /sys/class/net/ | grep -Ewv "lo|bonding_masters" )
-do
-    ip a show "${II}" 2>/dev/null
+for II in /sys/class/net/*; do
+    [[ "$II" =~ (lo|bonding_masters) ]] && continue
+    ip a show "$(basename "$II")" 2>/dev/null
 done | sed 's/^/IP_INFO: /'
 
 echo ; echo ROUTING: Route Table
@@ -72,10 +72,12 @@ do
 done | sed 's/^/SUDO: GROUPS: /'
 
 echo ; echo "NTP: conf (peers and servers only)"
-if ! command -v ntpq >/dev/null 2>&1 ; then
-    echo "NTP: ntpq command not found"
+if [ -f /etc/ntp.conf ]; then
+    grep -E "^(peer|server)" /etc/ntp.conf | sed 's/^/NTP: /'
+elif [ -f /etc/chrony.conf ]; then
+    grep -E "^(peer|server)" /etc/chrony.conf | sed 's/^/NTP: /'
 else
-    grep -E  "^(peer|server)" /etc/ntp.conf | sed 's/^/NTP: /'
+    echo "NTP: No NTP/Chrony configuration found" | sed 's/^/NTP: /'
 fi
 
 echo ; echo SECURITY: various setting
@@ -108,7 +110,7 @@ else
     echo "DPKG: Name;Version;Install date"
     {
         printf "Name;Version;Install date\n"
-        dpkg-query -W -f='${Package};${Version};${Installed-Size}\n' 2>/dev/null
+        dpkg-query -W -f='${Package};${Version};${db:Status-Date}\n' 2>/dev/null
     } | LC_ALL=C sort -t";" -k1,1 | column -s";" -t
 fi
 
