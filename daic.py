@@ -13,24 +13,21 @@ from pathlib import Path
 parser = argparse.ArgumentParser(description="DAIC system collector")
 parser.add_argument(
     "--collect-packages",
-    dest="collect_packages",
-    action="store_true",
-    help="Enable package listing (overrides COLLECT_PACKAGES env)",
-)
-parser.add_argument(
-    "--no-collect-packages",
-    dest="collect_packages",
-    action="store_false",
-    help="Disable package listing (overrides COLLECT_PACKAGES env)",
+    choices=["0", "1"],
+    help="Set to 1 to collect packages, 0 to skip (overrides COLLECT_PACKAGES env)",
 )
 parser.set_defaults(collect_packages=None)
 args = parser.parse_args()
 
 env_collect = os.getenv("COLLECT_PACKAGES")
 env_collect_bool = env_collect.lower() == "true" if env_collect else None
+arg_collect_bool = None
+if args.collect_packages is not None:
+    arg_collect_bool = args.collect_packages == "1"
+
 COLLECT_PACKAGES = (
-    args.collect_packages
-    if args.collect_packages is not None
+    arg_collect_bool
+    if arg_collect_bool is not None
     else (env_collect_bool if env_collect_bool is not None else False)
 )
 
