@@ -139,14 +139,15 @@ if command -v rpm >/dev/null 2>&1 ; then
         rpm -qa --queryformat "%{name};%{version}-%{release}-%{ARCH};%{installtime:date};%{vendor};%{buildhost}\n" 2>/dev/null | \
         LC_ALL=C sort -t";" -k1,1 | awk -F";" '{printf "  %-50s %-25s %-12s %-25s %s\n", $1, $2, $3, $4, $5}' | head -50
     }
-fi
-if command -v dpkg >/dev/null 2>&1 ; then
+elif command -v dpkg >/dev/null 2>&1 ; then
     {
         printf "  %-50s %-25s\n" "Name" "Version"
         printf "  %-50s %-25s\n" "---" "---"
         dpkg-query -W -f='${Package};${Version}\n' 2>/dev/null | \
         LC_ALL=C sort -t";" -k1,1 | awk -F";" '{printf "  %-50s %-25s\n", $1, $2}' | head -50
     }
+else
+    echo "  Package manager not found"
 fi
 echo
 
