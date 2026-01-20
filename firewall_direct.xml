@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<direct>
+  <rule ipv="ipv4" table="filter" chain="INPUT" priority="0">-m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT</rule>
+  <rule ipv="ipv4" table="filter" chain="INPUT" priority="0">-s 0.0.0.0/32 -j DROP</rule>
+  <rule ipv="ipv4" table="filter" chain="INPUT" priority="0">-i lo -d 127.0.0.0/8 -j ACCEPT</rule>
+  <rule ipv="ipv4" table="filter" chain="INPUT" priority="0">-d 127.0.0.0/8 -j DROP</rule>
+  <!-- DNS -->
+  <rule ipv="ipv4" table="filter" chain="INPUT" priority="0">-p tcp --dport 53 -j ACCEPT</rule>
+  <rule ipv="ipv4" table="filter" chain="INPUT" priority="0">-p udp --dport 53 -j ACCEPT</rule>
+  <!-- Web -->
+  <rule ipv="ipv4" table="filter" chain="INPUT" priority="0">-p tcp --dport 443 -j ACCEPT</rule>
+  <rule ipv="ipv4" table="filter" chain="INPUT" priority="0">-p tcp --dport 8080 -j ACCEPT</rule>
+  <rule ipv="ipv4" table="filter" chain="INPUT" priority="0">-p tcp --dport 80 -j ACCEPT</rule>
+  <!-- SSH -->
+  <rule ipv="ipv4" table="filter" chain="INPUT" priority="0">-p tcp --dport 22 -j ACCEPT</rule>
+  <rule ipv="ipv4" table="filter" chain="INPUT" priority="0">-m conntrack --ctstate NEW '!' -s 192.168.0.0/16 -m limit --limit 20/min -j LOG --log-prefix 'FIREWALL_NEW_EXT: '</rule>
+  <rule ipv="ipv4" table="filter" chain="INPUT" priority="1">-j DROP</rule>
+
+</direct>
