@@ -130,11 +130,9 @@ echo
 
 echo
 echo "================================================================================"
-echo "PACKAGES: Installed RPM/DNF"
+echo "PACKAGES: Installed"
 echo "================================================================================"
-if ! command -v rpm >/dev/null 2>&1 ; then
-    echo "  RPM not available"
-else
+if command -v rpm >/dev/null 2>&1 ; then
     {
         printf "  %-50s %-25s %-12s %-25s %s\n" "Name" "Version" "Date" "Vendor" "Build Host"
         printf "  %-50s %-25s %-12s %-25s %s\n" "---" "---" "---" "---" "---"
@@ -142,33 +140,25 @@ else
         LC_ALL=C sort -t";" -k1,1 | awk -F";" '{printf "  %-50s %-25s %-12s %-25s %s\n", $1, $2, $3, $4, $5}' | head -50
     }
 fi
-echo
-echo "================================================================================"
-echo "PACKAGES: Installed DPKG/APT"
-echo "================================================================================"
-if ! command -v dpkg >/dev/null 2>&1 ; then
-    echo "  DPKG not available"
-else
+if command -v dpkg >/dev/null 2>&1 ; then
     {
-        printf "  %-50s %-25s %s\n" "Name" "Version" "Install Date"
-        printf "  %-50s %-25s %s\n" "---" "---" "---"
-        dpkg-query -W -f='${Package};${Version};${db:Status-Date}\n' 2>/dev/null | \
-        LC_ALL=C sort -t";" -k1,1 | awk -F";" '{printf "  %-50s %-25s %s\n", $1, $2, $3}' | head -50
+        printf "  %-50s %-25s\n" "Name" "Version"
+        printf "  %-50s %-25s\n" "---" "---"
+        dpkg-query -W -f='${Package};${Version}\n' 2>/dev/null | \
+        LC_ALL=C sort -t";" -k1,1 | awk -F";" '{printf "  %-50s %-25s\n", $1, $2}' | head -50
     }
 fi
 echo
-
-
 
 echo "================================================================================"
 echo "ERROR LOGS: Recent Errors & Warnings"
 echo "================================================================================"
 TODAY="$(date '+%b %e')"
-echo "  From Today (${TODAY}):"
-grep -Ei "^${TODAY}.*(fail|error|warn)" /var/log/messages /var/log/secure /var/log/kernel 2>/dev/null | sed 's/^/    /' | head -20 || echo "    No recent errors found"
+echo "  Syslog Errors from Today:"
+journalctl --since today -p 3 -q | sed 's/^/    /' || echo "    No recent errors found"
 echo
-echo "  Boot Log Errors:"
-grep -Ei ".*(fail|error|warn)" /var/log/boot.log 2>/dev/null | sed 's/^/    /' | head -10 || echo "    No boot errors found"
+echo "  Boot Log Errors & Warnings from Yesterday:"
+journalctl --since yesterday -k -p6 --case-sensitive=0 -g "fail|error|warn" | sed 's/^/    /'
 echo
 echo "================================================================================"
 printf "Report generated: %s\n" "$(date)"
