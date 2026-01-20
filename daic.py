@@ -12,6 +12,7 @@ from pathlib import Path
 
 parser = argparse.ArgumentParser(description="DAIC system collector")
 parser.add_argument(
+    "-c",
     "--collect-packages",
     choices=["0", "1"],
     help="Set to 1 to collect packages, 0 to skip (overrides COLLECT_PACKAGES env)",
