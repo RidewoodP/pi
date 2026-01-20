@@ -51,7 +51,8 @@ else
 fi
 
 echo ; echo IP_INFO: Information
-for II in $(ls -1 /sys/class/net/ | grep -Ewv "lo|bonding_masters" ) ; do
+for II in $(ls -1 /sys/class/net/ | grep -Ewv "lo|bonding_masters" )
+do
     ip a show "${II}" 2>/dev/null
 done | sed 's/^/IP_INFO: /'
 
@@ -66,7 +67,8 @@ grep -E  -v "^(#|$)" /etc/sudoers /etc/sudoers.d/* 2>/dev/null | grep -v :Defaul
 
 # shellcheck disable=SC2013
 for GG in $(grep -h ^% /etc/sudoers /etc/sudoers.d/* 2>/dev/null | sed 's/^\%\([^[:space:]]*\)[[:space:]]*.*/\1/')
-do  getent group "${GG}"
+do 
+    getent group "${GG}"
 done | sed 's/^/SUDO: GROUPS: /'
 
 echo ; echo "NTP: conf (peers and servers only)"
@@ -89,11 +91,28 @@ echo
 
 
 echo
-echo "RPM: Name;Version;Install date;Vendor;Build"
-{
-    printf "Name;Version;Install date;Vendor;Build\n"
-    rpm -qa --queryformat "%{name};%{version}-%{release}-%{ARCH};%{installtime:date};%{vendor};%{buildhost}\n" 2>/dev/null
-} | LC_ALL=C sort -t";" -k1,1 | column -s";" -t
+# check rpm/dnf installed
+if ! command -v rpm >/dev/null 2>&1 ; then
+    echo "RPM: rpm command not found"
+else
+    echo "RPM: Name;Version;Install date;Vendor;Build"
+    {
+        printf "Name;Version;Install date;Vendor;Build\n"
+        rpm -qa --queryformat "%{name};%{version}-%{release}-%{ARCH};%{installtime:date};%{vendor};%{buildhost}\n" 2>/dev/null
+    } | LC_ALL=C sort -t";" -k1,1 | column -s";" -t
+fi
+# check dpkg/apt installed
+if ! command -v dpkg >/dev/null 2>&1 ; then
+    echo "DPKG: dpkg command not found"
+else
+    echo "DPKG: Name;Version;Install date"
+    {
+        printf "Name;Version;Install date\n"
+        dpkg-query -W -f='${Package};${Version};${Installed-Size}\n' 2>/dev/null
+    } | LC_ALL=C sort -t";" -k1,1 | column -s";" -t
+fi
+
+
 
 echo ; echo "ERROR: Error messages"
 TODAY="$(date '+%b %e')"
