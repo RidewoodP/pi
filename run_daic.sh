@@ -24,6 +24,6 @@ done
     mv "$LOG_DIR/${LOG_PREFIX}.log" "$LOG_DIR/${LOG_PREFIX}.1.log"
 
 # Run the script and redirect output to the log file
-/opt/daic/daic.sh > "$LOG_DIR/${LOG_PREFIX}.log" 2>&1
-
+# script lives in same dir as run_daic.sh
+./daic.sh > "$LOG_DIR/${LOG_PREFIX}.log" 2>&1
 
