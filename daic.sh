@@ -9,7 +9,7 @@
 
 #vars
 NDATE=$(date +"%Y-%m-%d %H:%M:%S")
-COLLECT_PACKAGES="${COLLECT_PACKAGES:-true}"   # set to false to skip package listing
+COLLECT_PACKAGES="${COLLECT_PACKAGES:-false}"   # set to false to skip package listing
 SEP="================================================================================"
 
 
