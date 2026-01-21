@@ -6,12 +6,10 @@
 #Info
 #Collector
 
-
 #vars
 NDATE=$(date +"%Y-%m-%d %H:%M:%S")
 COLLECT_PACKAGES="${COLLECT_PACKAGES:-false}"   # set to false to skip package listing
 SEP="================================================================================"
-
 
 # collecting stats
 
@@ -21,8 +19,7 @@ echo "$SEP"
 printf "  Hostname (short):  %s\n" "$(uname -n)"
 printf "  Hostname (FQDN):   %s\n" "$(hostname -f)"
 printf "  System:            %s\n" "$(uname -s)"
-grep PRETTY_NAME /etc/os-release | sed 's/^/  OS:                /; s/PRETTY_NAME=//; s/"//g'
-printf "  Uptime:            %s\n" "$(uptime | sed 's/^[^,]*up *//')"
+grep PRETTY_NAME /etc/os-release | sed 's/^/  OS:                /; s/PRETTY_NAME=//; s/"//g'\nprintf "  Uptime:            %s\n" "$(uptime | sed 's/^[^,]*up *//')"
 echo
 
 echo "$SEP"
@@ -37,13 +34,13 @@ echo "$SEP"
 grep Tot /proc/meminfo | awk '{printf "  %-30s %15s\n", $1, $2" KB"}' | sed 's/Total/Total Memory/'
 echo
 
-echo ; echo "DMI: info"
+echo "\nDMI: info"
 dmidecode -t1 | sed 's/^/DMI: /'
 
 echo "$SEP"
 echo "DISK USAGE: File System Utilization"
 echo "$SEP"
-df -hPl 2>/dev/null | awk 'NR==1 {printf "%-20s %10s %10s %10s %8s  %s\n", "Filesystem", "Size", "Used", "Available", "Use%", "Mounted on"} NR>1 {printf "%-20s %10s %10s %10s %8s  %s\n", $1, $2, $3, $4, $5, $6}'
+df -hPl 2>/dev/null | awk 'NR==1 {printf "% -20s %10s %10s %10s %8s  %s\n", "Filesystem", "Size", "Used", "Available", "Use%", "Mounted on"} NR>1 {printf "% -20s %10s %10s %10s %8s  %s\n", $1, $2, $3, $4, $5, $6}'
 echo
 
 # Hardware only status collection
@@ -82,13 +79,13 @@ echo
 echo "$SEP"
 echo "ROUTING: Route Table"
 echo "$SEP"
-ip route show 2>/dev/null | awk 'NR==1 {printf "%-40s %-15s %-10s\n", "Destination", "Gateway", "Interface"} {printf "%-40s %-15s %-10s\n", $1, $3, $5}' | head -20
+ip route show 2>/dev/null | awk 'NR==1 {printf "% -40s %-15s %-10s\n", "Destination", "Gateway", "Interface"} {printf "% -40s %-15s %-10s\n", $1, $3, $5}' | head -20
 echo
 
 echo "$SEP"
 echo "USERS: System Users (UID > 99)"
 echo "$SEP"
-getent passwd | awk -F : '{if ($3>99){printf "%-25s %-8s %-8s  %s\n", $1, "UID:"$3, "GID:"$4, $7}}' | sed 's/^/  /'
+getent passwd | awk -F : '{if ($3>99){printf "% -25s %-8s %-8s  %s\n", $1, "UID:"$3, "GID:"$4, $7}}' | sed 's/^/  /'
 echo
 
 echo "$SEP"
@@ -99,14 +96,14 @@ echo "$SEP"
     grep -E -v "^(#|$)" /etc/sudoers /etc/sudoers.d/* 2>/dev/null | grep -v :Default | sed 's/^/    /'
     echo
     echo "  Sudoers Groups:"
-    for GG in $(grep -h ^% /etc/sudoers /etc/sudoers.d/* 2>/dev/null | sed 's/^\%\([^[:space:]]*\)[[:space:]]*.*/\1/')
+    for GG in $(grep -h ^% /etc/sudoers /etc/sudoers.d/* 2>/dev/null | sed 's/^\\%\([^[:space:]]*\)[[:space:]]*.*/\1/')
     do 
         getent group "${GG}" | sed 's/^/    /'
     done
 } | head -50
 echo
 
-echo ; echo "NTP: conf (peers and servers only)"
+echo "\nNTP: conf (peers and servers only)"
 if [ -f /etc/ntp.conf ]; then
     grep -E "^(peer|server)" /etc/ntp.conf | sed 's/^/NTP: /'
 elif [ -f /etc/chrony.conf ]; then
@@ -114,28 +111,29 @@ elif [ -f /etc/chrony.conf ]; then
 else
     echo "NTP: No NTP/Chrony configuration found" | sed 's/^/NTP: /'
 fi
-
 echo "$SEP"
 echo "SECURITY: Configuration & Settings"
 echo "$SEP"
 echo "  SSL/TLS Ciphers (unique):"
 openssl ciphers -v 2>/dev/null | awk '{print $2}' | sort -u | sed 's/^/    /' | head -20
 echo
+
 echo "  Firewall Status (firewalld):"
 firewall-cmd --list-all 2>/dev/null | sed 's/^/    /' | head -30 || echo "    firewalld not available"
 echo
+
 echo "  IPTables Rules (sample):"
-iptables -nvL 2>/dev/null | sed 's/^/    /' | head -30 || echo "    iptables not available"
+ip6tables -nvL 2>/dev/null | sed 's/^/    /' | head -30 || echo "    iptables not available"
 echo
 
 echo "$SEP"
 echo "SERVICES: Listening Ports"
 echo "$SEP"
-ss -ntlp 2>/dev/null | awk 'NR==1 {printf "%-10s %-30s %-50s\n", "Proto", "Local Address", "Process"} NR>1 {printf "%-10s %-30s %-50s\n", $1, $4, $7}' | sed 's/^/  /'
+ss -ntlp 2>/dev/null | awk 'NR==1 {printf "% -10s %-30s %-50s\n", "Proto", "Local Address", "Process"} NR>1 {printf "% -10s %-30s %-50s\n", $1, $4, $7}' | sed 's/^/  /'
 echo
 
-
 echo
+
 echo "$SEP"
 echo "PACKAGES: Installed"
 echo "$SEP"
@@ -168,9 +166,11 @@ echo "$SEP"
 echo "  Syslog Errors from Today:"
 journalctl --since today -p 3 -q | sed 's/^/    /' || echo "    No recent errors found"
 echo
+
 echo "  Boot Log Errors & Warnings from Yesterday:"
 journalctl --since yesterday -k -p6 --case-sensitive=0 -g "fail|error|warn" | sed 's/^/    /'
 echo
+
 echo "$SEP"
 printf "Report generated: %s\n" "$NDATE"
 echo "$SEP"
