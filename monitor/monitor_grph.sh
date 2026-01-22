@@ -54,11 +54,13 @@ END {
         }
     }
     
-    # Sort output by timestamp
+    # Sort output by timestamp (not by color marker)
     n = output_count
     for (i = 1; i <= n; i++) {
         for (j = i + 1; j <= n; j++) {
-            if (output_lines[i] > output_lines[j]) {
+            ts_i = substr(output_lines[i], 3);  # Skip color marker
+            ts_j = substr(output_lines[j], 3);  # Skip color marker
+            if (ts_i > ts_j) {
                 temp = output_lines[i]
                 output_lines[i] = output_lines[j]
                 output_lines[j] = temp
