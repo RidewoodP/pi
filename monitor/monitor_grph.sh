@@ -22,7 +22,55 @@ echo "$timestamp,$cpu_usage,$mem_usage,$disk_usage,$pi_temp" >> "$LOG_FILE"
 
 /opt/monitoring/csv_to_json.py
 
-tail -n30 "${LOG_FILE}" | grep -Eiv -- "Timestamp|--" > "${LOG_FILE}_data"
+tail -n +2 "${LOG_FILE}" | awk '
+BEGIN { count = 0 }
+{
+    lines[++count] = $0
+}
+END {
+    output_count = 0
+    
+    # First 30 lines (most recent, every 5 min) - GREEN
+    start = (count > 30) ? count - 29 : 1
+    for (i = start; i <= count; i++) {
+        output_lines[++output_count] = "G|" lines[i]
+    }
+    
+    # Next 10 lines every 30 minutes (every 6 entries at 5-min intervals) - YELLOW
+    if (count > 30) {
+        skip_count = 0
+        for (i = count - 30; i >= 1 && skip_count < 10; i -= 6) {
+            output_lines[++output_count] = "Y|" lines[i]
+            skip_count++
+        }
+    }
+    
+    # Next 10 lines every 1 hour (every 12 entries at 5-min intervals) - BLUE
+    if (count > 60) {
+        skip_count = 0
+        for (i = count - 60; i >= 1 && skip_count < 10; i -= 12) {
+            output_lines[++output_count] = "B|" lines[i]
+            skip_count++
+        }
+    }
+    
+    # Sort output by timestamp
+    n = output_count
+    for (i = 1; i <= n; i++) {
+        for (j = i + 1; j <= n; j++) {
+            if (output_lines[i] > output_lines[j]) {
+                temp = output_lines[i]
+                output_lines[i] = output_lines[j]
+                output_lines[j] = temp
+            }
+        }
+    }
+    
+    # Print sorted output
+    for (i = 1; i <= output_count; i++) {
+        print output_lines[i]
+    }
+}' > "${LOG_FILE}_data"
 
 {
     echo "<html>"
@@ -42,7 +90,15 @@ tail -n30 "${LOG_FILE}" | grep -Eiv -- "Timestamp|--" > "${LOG_FILE}_data"
         printf "-----------------------|---------------|------------------|----------------|--------\n";
     }
     NR > 1 {
-        printf "%-22s |  %-12s |  %-15s |  %-13s |   %-8s \n", $1, $2, $3, $4, $5 ;
+        color_marker = substr($0, 1, 1);
+        data = substr($0, 3);
+        split(data, fields, ",");
+        if (color_marker == "G") color = "\033[32m";
+        else if (color_marker == "Y") color = "\033[33m";
+        else if (color_marker == "B") color = "\033[34m";
+        else color = "";
+        reset = "\033[0m";
+        printf color "%-22s |  %-12s |  %-15s |  %-13s |   %-8s " reset "\n", fields[1], fields[2], fields[3], fields[4], fields[5];
     }' "${LOG_FILE}_data"
     echo "</pre>"
     echo "</body>"
