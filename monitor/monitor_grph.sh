@@ -93,11 +93,11 @@ END {
         color_marker = substr($0, 1, 1);
         data = substr($0, 3);
         split(data, fields, ",");
-        if (color_marker == "G") color = "\033[32m";
-        else if (color_marker == "Y") color = "\033[33m";
-        else if (color_marker == "B") color = "\033[34m";
+        if (color_marker == "G") color = "<span style=\"color: green;\">";
+        else if (color_marker == "Y") color = "<span style=\"color: gold;\">";
+        else if (color_marker == "B") color = "<span style=\"color: blue;\">";
         else color = "";
-        reset = "\033[0m";
+        reset = (color != "") ? "</span>" : "";
         printf color "%-22s |  %-12s |  %-15s |  %-13s |   %-8s " reset "\n", fields[1], fields[2], fields[3], fields[4], fields[5];
     }' "${LOG_FILE}_data"
     echo "</pre>"
