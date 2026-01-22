@@ -29,28 +29,41 @@ BEGIN { count = 0 }
 }
 END {
     output_count = 0
+    seen_data = ""  # Track seen timestamps to avoid duplicates
     
     # First 30 lines (most recent, every 5 min) - GREEN
     start = (count > 30) ? count - 29 : 1
     for (i = start; i <= count; i++) {
-        output_lines[++output_count] = "G|" lines[i]
+        ts = lines[i]
+        if (!(ts in seen)) {
+            output_lines[++output_count] = "G|" lines[i]
+            seen[ts] = 1
+        }
     }
     
     # Next 10 lines every 30 minutes (every 6 entries at 5-min intervals) - YELLOW
     if (count > 30) {
         skip_count = 0
-        for (i = count - 30; i >= 1 && skip_count < 10; i -= 6) {
-            output_lines[++output_count] = "Y|" lines[i]
-            skip_count++
+        for (i = count - 36; i >= 1 && skip_count < 10; i -= 6) {
+            ts = lines[i]
+            if (!(ts in seen)) {
+                output_lines[++output_count] = "Y|" lines[i]
+                seen[ts] = 1
+                skip_count++
+            }
         }
     }
     
     # Next 10 lines every 1 hour (every 12 entries at 5-min intervals) - BLUE
     if (count > 60) {
         skip_count = 0
-        for (i = count - 60; i >= 1 && skip_count < 10; i -= 12) {
-            output_lines[++output_count] = "B|" lines[i]
-            skip_count++
+        for (i = count - 72; i >= 1 && skip_count < 10; i -= 12) {
+            ts = lines[i]
+            if (!(ts in seen)) {
+                output_lines[++output_count] = "B|" lines[i]
+                seen[ts] = 1
+                skip_count++
+            }
         }
     }
     
