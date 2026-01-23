@@ -8,7 +8,7 @@ TTIME=$(date "+%Y-%d-%h %H:%M")
 
 # Ensure log file exists
 if [ ! -f "$LOG_FILE" ]; then
-    echo "timestamp,cpu_usage,memory_usage,disk_usage" > "$LOG_FILE"
+    echo "timestamp,cpu_usage,memory_usage,disk_usage,pi_temp" > "$LOG_FILE"
 fi
 
 # Collect metrics
