@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Pi System Usage</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <h2>System Usage</h2>
+
+  <label for="rangeSelect">Select Range:</label>
+  <select id="rangeSelect">
+    <option value="all">All Data</option>
+    <option value="7d">Last 7 Days</option>
+    <option value="30d">Last 30 Days</option>
+  </select>
+
+  <canvas id="usageChart" width="600" height="300"></canvas>
+
+  <script>
+    let chartInstance;
+
+    function filterDataByDate(data, days) {
+      if (days === 'all') return data;
+
+      const now = new Date();
+      const cutoff = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+
+      const filtered = {
+        timestamp: [],
+        cpu_usage: [],
+        memory_usage: [],
+        disk_usage: []
+      };
+
+      for (let i = 0; i < data.timestamp.length; i++) {
+        const ts = new Date(data.timestamp[i]);
+        if (ts >= cutoff) {
+          filtered.timestamp.push(data.timestamp[i]);
+          filtered.cpu_usage.push(data.cpu_usage[i]);
+          filtered.memory_usage.push(data.memory_usage[i]);
+          filtered.disk_usage.push(data.disk_usage[i]);
+        }
+      }
+      return filtered;
+    }
+
+    function renderChart(data) {
+      const ctx = document.getElementById('usageChart').getContext('2d');
+      if (chartInstance) chartInstance.destroy();
+
+      chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: data.timestamp,
+          datasets: [
+            {
+              label: 'CPU Usage (%)',
+              data: data.cpu_usage,
+              borderColor: 'red',
+              fill: false
+            },
+            {
+              label: 'Memory Usage (%)',
+              data: data.memory_usage,
+              borderColor: 'blue',
+              fill: false
+            },
+            {
+              label: 'Disk Usage (%)',
+              data: data.disk_usage,
+              borderColor: 'green',
+              fill: false
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            x: {
+              title: {
+                display: true,
+                text: 'Time'
+              }
+            },
+            y: {
+              beginAtZero: true
+            }
+          }
+        }
+      });
+    }
+
+    fetch('data/stats.json')
+      .then(res => res.json())
+      .then(rawData => {
+        renderChart(rawData);
+
+        document.getElementById('rangeSelect').addEventListener('change', (e) => {
+          let filtered;
+          if (e.target.value === '7d') {
+            filtered = filterDataByDate(rawData, 7);
+          } else if (e.target.value === '30d') {
+            filtered = filterDataByDate(rawData, 30);
+          } else {
+            filtered = rawData;
+          }
+          renderChart(filtered);
+        });
+      });
+  </script>
+</body>
+</html>
+

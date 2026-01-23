@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv='refresh' content='30'>
+  <title>Pi Usage Graphs</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <h2>System Usage Graph</h2>
+
+  <label for="rangeSelect">View:</label>
+  <select id="rangeSelect">
+    <option value="raw">Raw (All)</option>
+    <option value="hourly">Hourly Average</option>
+    <option value="daily">Daily Average</option>
+    <option value="7d">Last 7 Days (Raw)</option>
+    <option value="30d">Last 30 Days (Raw)</option>
+  </select>
+
+  <canvas id="usageChart" width="800" height="400"></canvas>
+
+  <script>
+    let chartInstance;
+
+    function groupAndAverage(data, keyFunc) {
+      const buckets = {};
+      const counts = {};
+
+      for (let i = 0; i < data.timestamp.length; i++) {
+        const key = keyFunc(new Date(data.timestamp[i]));
+        if (!buckets[key]) {
+          buckets[key] = { cpu: 0, mem: 0, disk: 0 };
+          counts[key] = 0;
+        }
+        buckets[key].cpu += data.cpu_usage[i];
+        buckets[key].mem += data.memory_usage[i];
+        buckets[key].disk += data.disk_usage[i];
+        counts[key]++;
+      }
+
+      const result = {
+        timestamp: [],
+        cpu_usage: [],
+        memory_usage: [],
+        disk_usage: []
+      };
+
+      for (const k of Object.keys(buckets).sort()) {
+        result.timestamp.push(k);
+        result.cpu_usage.push(buckets[k].cpu / counts[k]);
+        result.memory_usage.push(buckets[k].mem / counts[k]);
+        result.disk_usage.push(buckets[k].disk / counts[k]);
+      }
+
+      return result;
+    }
+
+    function filterDataByDate(data, days) {
+      const now = new Date();
+      const cutoff = new Date(now.getTime() - days * 86400000);
+      const result = {
+        timestamp: [],
+        cpu_usage: [],
+        memory_usage: [],
+        disk_usage: []
+      };
+
+      for (let i = 0; i < data.timestamp.length; i++) {
+        const ts = new Date(data.timestamp[i]);
+        if (ts >= cutoff) {
+          result.timestamp.push(data.timestamp[i]);
+          result.cpu_usage.push(data.cpu_usage[i]);
+          result.memory_usage.push(data.memory_usage[i]);
+          result.disk_usage.push(data.disk_usage[i]);
+        }
+      }
+      return result;
+    }
+
+    function renderChart(data) {
+      const ctx = document.getElementById('usageChart').getContext('2d');
+      if (chartInstance) chartInstance.destroy();
+
+      chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: data.timestamp,
+          datasets: [
+            {
+              label: 'CPU Usage (%)',
+              data: data.cpu_usage,
+              borderColor: 'red',
+              fill: false
+            },
+            {
+              label: 'Memory Usage (%)',
+              data: data.memory_usage,
+              borderColor: 'blue',
+              fill: false
+            },
+            {
+              label: 'Disk Usage (%)',
+              data: data.disk_usage,
+              borderColor: 'green',
+              fill: false
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            x: {
+              title: {
+                display: true,
+                text: 'Time'
+              }
+            },
+            y: {
+              beginAtZero: true
+            }
+          }
+        }
+      });
+    }
+
+    fetch('data/stats.json')
+      .then(res => res.json())
+      .then(rawData => {
+        renderChart(rawData);
+
+        document.getElementById('rangeSelect').addEventListener('change', (e) => {
+          const value = e.target.value;
+
+          let result;
+          if (value === 'hourly') {
+            result = groupAndAverage(rawData, d => d.toISOString().slice(0, 13)); // YYYY-MM-DDTHH
+          } else if (value === 'daily') {
+            result = groupAndAverage(rawData, d => d.toISOString().slice(0, 10)); // YYYY-MM-DD
+          } else if (value === '7d') {
+            result = filterDataByDate(rawData, 7);
+          } else if (value === '30d') {
+            result = filterDataByDate(rawData, 30);
+          } else {
+            result = rawData;
+          }
+
+          renderChart(result);
+        });
+      });
+  </script>
+</body>
+</html>
+

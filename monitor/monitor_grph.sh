@@ -47,7 +47,7 @@ END {
         for (i = count - 36; i >= 1 && skip_count < 10; i -= 6) {
             ts = lines[i]
             if (!(ts in seen)) {
-                output_lines[++output_count] = "Y|" lines[i]
+                output_lines[++output_count] = "B|" lines[i]
                 seen[ts] = 1
                 skip_count++
             }
@@ -60,7 +60,7 @@ END {
         for (i = count - 72; i >= 1 && skip_count < 10; i -= 12) {
             ts = lines[i]
             if (!(ts in seen)) {
-                output_lines[++output_count] = "B|" lines[i]
+                output_lines[++output_count] = "Y|" lines[i]
                 seen[ts] = 1
                 skip_count++
             }
@@ -85,7 +85,7 @@ END {
     for (i = 1; i <= output_count; i++) {
         print output_lines[i]
     }
-}' > "${LOG_FILE}_data"
+}' | tac > "${LOG_FILE}_data"
 
 {
     echo "<html>"
