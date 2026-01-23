@@ -41,7 +41,7 @@ END {
         }
     }
     
-    # Next 10 lines every 30 minutes (every 6 entries at 5-min intervals) - YELLOW
+    # Next 10 lines every 30 minutes (every 6 entries at 5-min intervals) - BLUE
     if (count > 20) {
         skip_count = 0
         for (i = count - 36; i >= 1 && skip_count < 10; i -= 6) {
@@ -54,13 +54,13 @@ END {
         }
     }
     
-    # Next 10 lines every 1 hour (every 12 entries at 5-min intervals) - BLUE
+    # Next 10 lines every 1 hour (every 12 entries at 5-min intervals) - TEAL
     if (count > 60) {
         skip_count = 0
         for (i = count - 72; i >= 1 && skip_count < 10; i -= 12) {
             ts = lines[i]
             if (!(ts in seen)) {
-                output_lines[++output_count] = "Y|" lines[i]
+                output_lines[++output_count] = "T|" lines[i]
                 seen[ts] = 1
                 skip_count++
             }
@@ -109,7 +109,7 @@ END {
         data = substr($0, 3);
         split(data, fields, ",");
         if (color_marker == "G") color = "<span style=\"color: green;\">";
-        else if (color_marker == "Y") color = "<span style=\"color: gold;\">";
+        else if (color_marker == "T") color = "<span style=\"color: #14b8a6;\">";
         else if (color_marker == "B") color = "<span style=\"color: blue;\">";
         else color = "";
         reset = (color != "") ? "</span>" : "";
