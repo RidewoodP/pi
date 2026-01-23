@@ -31,8 +31,8 @@ END {
     output_count = 0
     seen_data = ""  # Track seen timestamps to avoid duplicates
     
-    # First 30 lines (most recent, every 5 min) - GREEN
-    start = (count > 30) ? count - 29 : 1
+    # First 20 lines (most recent, every 5 min) - GREEN
+    start = (count > 20) ? count - 19 : 1
     for (i = start; i <= count; i++) {
         ts = lines[i]
         if (!(ts in seen)) {
@@ -42,7 +42,7 @@ END {
     }
     
     # Next 10 lines every 30 minutes (every 6 entries at 5-min intervals) - YELLOW
-    if (count > 30) {
+    if (count > 20) {
         skip_count = 0
         for (i = count - 36; i >= 1 && skip_count < 10; i -= 6) {
             ts = lines[i]
