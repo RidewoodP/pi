@@ -1,1 +1,4 @@
 metrics*
+monitor/www/html/metrics.log
+monitor/www/html/metrics.log_data
+monitor/www/html/metrics.log_
