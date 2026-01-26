@@ -58,16 +58,17 @@ cat > "$OUTPUT_FILE" <<'EOF'
 </head>
 <body>
 <h2>System Monitoring Report</h2>
-<p><strong>Hostname:</strong> HOSTNAME_VAL</p>
-<p><strong>Uptime:</strong> UPTIME_VAL</p>
-<p><strong>CPU Throttling Status:</strong>THROTTLE_MSG<val></p>
-</p>
+  <p><strong>Hostname:</strong>              HOSTNAME_VAL</p>
+  <p><strong>Uptime:</strong>                UPTIME_VAL</p>
+  <p><strong>CPU Throttling Status:</strong></p>
+  <pre>THROTTLE_MSG</pre>
+
 <table>
-<tr><th>Metric</th><th>Value</th></tr>
-<tr><td>CPU Load (1, 5, 15 min)</td><td>CPU_LOAD_VAL</td></tr>
-<tr><td>Memory Usage</td><td>MEMORY_USAGE_VAL</td></tr>
-<tr><td>Disk Usage (Root Partition)</td><td>DISK_USAGE_VAL</td></tr>
-<tr><td>Network Interfaces</td><td><ul>
+  <tr><th>Metric</th><th>Value</th></tr>
+  <tr><td>CPU Load (1, 5, 15 min)</td>      <td>CPU_LOAD_VAL</td></tr>
+  <tr><td>Memory Usage</td>                 <td>MEMORY_USAGE_VAL</td></tr>
+  <tr><td>Disk Usage (Root Partition)</td>  <td>DISK_USAGE_VAL</td></tr>
+  <tr><td>Network Interfaces</td><td><ul>
 EOF
 
 # Inject dynamic values into placeholders
@@ -80,10 +81,10 @@ sed -i \
   -e "s/THROTTLE_MSG/$THROTTLE_MSG/" \
   "$OUTPUT_FILE"
 
-# Add network interfaces without breaking on spaces
-while IFS= read -r iface; do
-  echo "<li>$iface</li>" >> "$OUTPUT_FILE"
-done <<< "$NETWORK_INTERFACES"
+    # Add network interfaces without breaking on spaces
+    while IFS= read -r iface; do
+      echo "<li>$iface</li>" >> "$OUTPUT_FILE"
+    done <<< "$NETWORK_INTERFACES"
 
 cat >> "$OUTPUT_FILE" <<'EOF'
 </ul></td></tr>
