@@ -39,7 +39,8 @@ THROTTLE_MSG=""
 [ $((THROTTLE_DEC & (1 << 17))) -ne 0 ] && THROTTLE_MSG="${THROTTLE_MSG}• Arm frequency capping has occurred\n"
 [ $((THROTTLE_DEC & (1 << 18))) -ne 0 ] && THROTTLE_MSG="${THROTTLE_MSG}• Throttling has occurred\n"
 [ $((THROTTLE_DEC & (1 << 19))) -ne 0 ] && THROTTLE_MSG="${THROTTLE_MSG}• Soft temperature limit has occurred\n"
-
+# If no issues, set a default message
+[ -z "$THROTTLE_MSG" ] && THROTTLE_MSG="No throttling detected."
 
 # Start HTML content
 cat > "$OUTPUT_FILE" <<'EOF'
