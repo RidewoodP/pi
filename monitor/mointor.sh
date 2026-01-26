@@ -60,8 +60,7 @@ cat > "$OUTPUT_FILE" <<'EOF'
 <h2>System Monitoring Report</h2>
 <p><strong>Hostname:</strong> HOSTNAME_VAL</p>
 <p><strong>Uptime:</strong> UPTIME_VAL</p>
-<p><strong>CPU Throttling Status:</strong><br>
-<pre>THROTTLE_MSG</pre>
+<p><strong>CPU Throttling Status:</strong>THROTTLE_MSG<val></p>
 </p>
 <table>
 <tr><th>Metric</th><th>Value</th></tr>
