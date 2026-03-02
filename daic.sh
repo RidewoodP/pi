@@ -7,70 +7,75 @@
 #Collector
 
 #vars
-NDATE=$(date +"%Y-%m-%d %H:%M:%S")
 COLLECT_PACKAGES="${COLLECT_PACKAGES:-false}"   # set to false to skip package listing
 SEP="================================================================================"
 
 # options
 set -o pipefail
+set -e  # Exit on error
 # collect packages if enabled
 # -collect-packages|-c: set COLLECT_PACKAGES=true to enable package listing (rpm or dpkg)
 # -debug|-d: enable debug output (set -x)
 # -output|-o: specify output file (default: stdout)
 
-setoptions() {
-    while [[ "$1" == -* ]]; do
-        case "$1" in
-            -collect-packages|-c)
-                COLLECT_PACKAGES=true
-                shift
-                ;;
-            -debug|-d)
-                set -x
-                shift
-                ;;
-            -output|-o)
-                if [[ -n "$2" ]]; then
-                    exec > >(tee "$2") 2>&1
-                    shift 2
-                else
-                    echo "Error: -output requires a filename argument" >&2
-                    exit 1
-                fi
-                ;;
-            *)
-                echo "Unknown option: $1" >&2
+
+opts=$(getopt -o c,d,o: --long collect-packages,debug,output: -n "$0" -- "$@")
+if [ $? != 0 ]; then
+    echo "Error: invalid options" >&2
+    exit 1
+fi
+
+eval set -- "$opts"
+
+while true; do
+    case "$1" in
+        -c|--collect-packages)
+            COLLECT_PACKAGES=true
+            shift
+            ;;
+        -d|--debug)
+            set -x
+            shift
+            ;;
+        -o|--output)
+            if [[ -n "$2" ]]; then
+                exec > >(tee "$2") 2>&1
+                shift 2
+            else
+                echo "Error: --output requires a filename argument" >&2
                 exit 1
-                ;;
-        esac
-    done
-}
+            fi
+            ;;
+        --)
+            shift
+            break
+            ;;
+        *)
+            echo "Unknown option: $1" >&2
+            exit 1
+            ;;
+    esac
+done
 
 # functions
 output_header() {
+    local timestamp=$(date +"%Y-%m-%d %H:%M:%S")
     echo "$SEP"
     echo "DAIC: Device And Info Collector"
-    echo "Generated on: $NDATE"
+    echo "Generated on: $timestamp"
     echo "$SEP"
 }
-log() {
-    # depending on debug mode, this can be used for structured logging with timestamps and levels
-    # debug, add date and time to logs
-    # no debug, just print the message
 
+log() {
     local message="$1"
     local timestamp
     shift
     timestamp=$(date +"%Y-%m-%d %H:%M:%S")
-    
     echo "[$timestamp] [${message}] $*"
 }
 
 # collecting stats
-
-echo "$SEP"
-echo "HOST INFORMATION"
-echo "$SEP"
+output_header
 printf "  Hostname (short):  %s\n" "$(uname -n)"
 printf "  Hostname (FQDN):   %s\n" "$(hostname -f)"
 printf "  System:            %s\n" "$(uname -s)"
@@ -230,5 +235,5 @@ journalctl --since yesterday -k -p6 --case-sensitive=0 -g "fail|error|warn" | se
 echo
 
 echo "$SEP"
-printf "Report generated: %s\n" "$NDATE"
+printf "Report generated: %s\n" "$(date +"%Y-%m-%d %H:%M:%S")"
 echo "$SEP"
