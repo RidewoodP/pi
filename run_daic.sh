@@ -25,5 +25,5 @@ done
 
 # Run the script and redirect output to the log file
 # script lives in same dir as run_daic.sh
-./daic.sh > "$LOG_DIR/${LOG_PREFIX}.log" 2>&1
+./daic.sh -c > "$LOG_DIR/${LOG_PREFIX}.log" 2>&1
 
