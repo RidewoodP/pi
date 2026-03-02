@@ -7,12 +7,12 @@
 #Collector
 
 #vars
+NDATE=$(date +"%Y-%m-%d %H:%M:%S")
 COLLECT_PACKAGES="${COLLECT_PACKAGES:-false}"   # set to false to skip package listing
 SEP="================================================================================"
 
 # options
 set -o pipefail
-set -e  # Exit on error
 # collect packages if enabled
 # -collect-packages|-c: set COLLECT_PACKAGES=true to enable package listing (rpm or dpkg)
 # -debug|-d: enable debug output (set -x)
@@ -59,23 +59,29 @@ done
 
 # functions
 output_header() {
-    local timestamp=$(date +"%Y-%m-%d %H:%M:%S")
     echo "$SEP"
     echo "DAIC: Device And Info Collector"
-    echo "Generated on: $timestamp"
+    echo "Generated on: $NDATE"
     echo "$SEP"
 }
-
 log() {
+    # depending on debug mode, this can be used for structured logging with timestamps and levels
+    # debug, add date and time to logs
+    # no debug, just print the message
+
     local message="$1"
     local timestamp
     shift
     timestamp=$(date +"%Y-%m-%d %H:%M:%S")
+    
     echo "[$timestamp] [${message}] $*"
 }
 
 # collecting stats
-output_header
+
+echo "$SEP"
+echo "HOST INFORMATION"
+echo "$SEP"
 printf "  Hostname (short):  %s\n" "$(uname -n)"
 printf "  Hostname (FQDN):   %s\n" "$(hostname -f)"
 printf "  System:            %s\n" "$(uname -s)"
@@ -235,5 +241,5 @@ journalctl --since yesterday -k -p6 --case-sensitive=0 -g "fail|error|warn" | se
 echo
 
 echo "$SEP"
-printf "Report generated: %s\n" "$(date +"%Y-%m-%d %H:%M:%S")"
+printf "Report generated: %s\n" "$NDATE"
 echo "$SEP"
