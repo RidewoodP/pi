@@ -7,8 +7,8 @@ set -o pipefail
 
 LOG_DIR="/var/log"
 LOG_PREFIX="daic"
-MAX_LOGS=9
-RETENTION_DAYS=7
+MAX_LOGS=20
+RETENTION_DAYS=30
 
 # Remove old log files
 find "$LOG_DIR" -name "${LOG_PREFIX}.*.log" -type f -mtime +${RETENTION_DAYS} -delete
