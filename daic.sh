@@ -11,6 +11,61 @@ NDATE=$(date +"%Y-%m-%d %H:%M:%S")
 COLLECT_PACKAGES="${COLLECT_PACKAGES:-false}"   # set to false to skip package listing
 SEP="================================================================================"
 
+# options
+set -o pipefail
+# collect packages if enabled
+# -collect-packages|-c: set COLLECT_PACKAGES=true to enable package listing (rpm or dpkg)
+# -debug|-d: enable debug output (set -x)
+# -output|-o: specify output file (default: stdout)
+
+setoptions() {
+    while [[ "$1" == -* ]]; do
+        case "$1" in
+            -collect-packages|-c)
+                COLLECT_PACKAGES=true
+                shift
+                ;;
+            -debug|-d)
+                set -x
+                shift
+                ;;
+            -output|-o)
+                if [[ -n "$2" ]]; then
+                    exec > >(tee "$2") 2>&1
+                    shift 2
+                else
+                    echo "Error: -output requires a filename argument" >&2
+                    exit 1
+                fi
+                ;;
+            *)
+                echo "Unknown option: $1" >&2
+                exit 1
+                ;;
+        esac
+    done
+}
+
+# functions
+output_header() {
+    echo "$SEP"
+    echo "DAIC: Device And Info Collector"
+    echo "Generated on: $NDATE"
+    echo "$SEP"
+}
+log() {
+    # depending on debug mode, this can be used for structured logging with timestamps and levels
+    # debug, add date and time to logs
+    # no debug, just print the message
+
+    local message="$1"
+    local timestamp
+    shift
+    timestamp=$(date +"%Y-%m-%d %H:%M:%S")
+    
+    echo "[$timestamp] [${message}] $*"
+}
+
 # collecting stats
 
 echo "$SEP"
@@ -19,7 +74,8 @@ echo "$SEP"
 printf "  Hostname (short):  %s\n" "$(uname -n)"
 printf "  Hostname (FQDN):   %s\n" "$(hostname -f)"
 printf "  System:            %s\n" "$(uname -s)"
-grep PRETTY_NAME /etc/os-release | sed 's/^/  OS:                /; s/PRETTY_NAME=//; s/"//g'\nprintf "  Uptime:            %s\n" "$(uptime | sed 's/^[^,]*up *//')"
+grep PRETTY_NAME /etc/os-release | sed 's/^/  OS:                /; s/PRETTY_NAME=//; s/"//g'
+printf "  Uptime:            %s\n" "$(uptime | sed 's/^[^,]*up *//')"
 echo
 
 echo "$SEP"
@@ -34,7 +90,8 @@ echo "$SEP"
 grep Tot /proc/meminfo | awk '{printf "  %-30s %15s\n", $1, $2" KB"}' | sed 's/Total/Total Memory/'
 echo
 
-echo "\nDMI: info"
+echo
+echo "DMI: info"
 dmidecode -t1 | sed 's/^/DMI: /'
 
 echo "$SEP"
@@ -103,7 +160,8 @@ echo "$SEP"
 } | head -50
 echo
 
-echo "\nNTP: conf (peers and servers only)"
+echo
+echo "NTP: conf (peers and servers only)"
 if [ -f /etc/ntp.conf ]; then
     grep -E "^(peer|server)" /etc/ntp.conf | sed 's/^/NTP: /'
 elif [ -f /etc/chrony.conf ]; then
