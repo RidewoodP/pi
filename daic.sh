@@ -10,6 +10,7 @@
 NDATE=$(date +"%Y-%m-%d %H:%M:%S")
 COLLECT_PACKAGES="${COLLECT_PACKAGES:-false}"   # set to false to skip package listing
 SEP="================================================================================"
+DEBUG=false
 
 # options
 set -o pipefail
@@ -27,7 +28,7 @@ fi
 
 eval set -- "$opts"
 
-while true; do
+while true; do # loop through command line options
     case "$1" in
         -c|--collect-packages)
             COLLECT_PACKAGES=true
@@ -35,6 +36,7 @@ while true; do
             ;;
         -d|--debug)
             set -x
+            DEBUG=true
             shift
             ;;
         -o|--output)
@@ -73,8 +75,11 @@ log() {
     local timestamp
     shift
     timestamp=$(date +"%Y-%m-%d %H:%M:%S")
-    
-    echo "[$timestamp] [${message}] $*"
+    if [[ ${DEBUG:-false} == true ]]; then
+        echo "[$timestamp] [${message}] $*"
+    else
+        echo "$*"
+    fi
 }
 
 # collecting stats
@@ -86,13 +91,13 @@ printf "  Hostname (short):  %s\n" "$(uname -n)"
 printf "  Hostname (FQDN):   %s\n" "$(hostname -f)"
 printf "  System:            %s\n" "$(uname -s)"
 grep PRETTY_NAME /etc/os-release | sed 's/^/  OS:                /; s/PRETTY_NAME=//; s/"//g'
-printf "  Uptime:            %s\n" "$(uptime | sed 's/^[^,]*up *//')"
+printf "  Uptime:            %s\n" "$(uptime -p | sed 's/up //')"
 echo
 
 echo "$SEP"
 echo "LOGIN: Last 20 logins"
 echo "$SEP"
-last -n20 | sed 's/^/  /'
+last -dn20 | sed 's/^/  /'
 echo
 
 echo "$SEP"
@@ -130,9 +135,15 @@ if [ -f /usr/sbin/omreport ] ; then
     
     echo "  System Temperatures:"
     /usr/sbin/omreport chassis temps 2>/dev/null | grep -E -A3 "Index.*[0-9]" | sed 's/^/    /'
-else
-    echo "  DELL OpenManage not installed or not applicable"
 fi
+# check raspberry pi hardware status
+if [ -f /usr/bin/vcgencmd ] ; then
+    echo "  Raspberry Pi Hardware Status:"
+    /usr/bin/vcgencmd measure_temp 2>/dev/null | sed 's/^/    Temperature: /'
+    /usr/bin/vcgencmd measure_clock arm 2>/dev/null | sed 's/^/    CPU Clock: /'
+    /usr/bin/vcgencmd measure_volts 2>/dev/null | sed 's/^/    Voltage: /'
+fi
+
 echo
 
 echo "$SEP"
@@ -153,7 +164,7 @@ echo
 echo "$SEP"
 echo "USERS: System Users (UID > 99)"
 echo "$SEP"
-getent passwd | awk -F : '{if ($3>99){printf "% -25s %-8s %-8s  %s\n", $1, "UID:"$3, "GID:"$4, $7}}' | sed 's/^/  /'
+getent passwd | sort -nk3 -t: | awk -F : '{if ($3>99){printf "% -25s %-8s %-8s  %s\n", $1, "UID:"$3, "GID:"$4, $7}}' | sed 's/^/  /' | column -t
 echo
 
 echo "$SEP"
@@ -164,7 +175,7 @@ echo "$SEP"
     grep -E -v "^(#|$)" /etc/sudoers /etc/sudoers.d/* 2>/dev/null | grep -v :Default | sed 's/^/    /'
     echo
     echo "  Sudoers Groups:"
-    for GG in $(grep -h ^% /etc/sudoers /etc/sudoers.d/* 2>/dev/null | sed 's/^\\%\([^[:space:]]*\)[[:space:]]*.*/\1/')
+    grep -h ^% /etc/sudoers /etc/sudoers.d/* 2>/dev/null | sed 's/^%\([^[:space:]]*\)[[:space:]]*.*/\1/' | while read -r GG
     do 
         getent group "${GG}" | sed 's/^/    /'
     done
