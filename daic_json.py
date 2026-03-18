@@ -370,7 +370,7 @@ report["services_listening"] = {
 if COLLECT_PACKAGES:
     if shutil.which("rpm"):
         packages_result = run_cmd(
-            "rpm -qa --queryformat '%{name};%{version}-%{release}-%{ARCH};%{installtime:date};%{vendor};%{buildhost}\n' | LC_ALL=C sort -t';' -k1,1"
+            "rpm -qa --queryformat '%{name};%{version}-%{release}-%{ARCH};%{installtime:date};%{vendor};%{buildhost}\\n' | LC_ALL=C sort -t';' -k1,1"
         )
         packages = []
         for line in split_nonempty_lines(packages_result["stdout"]):
@@ -389,11 +389,15 @@ if COLLECT_PACKAGES:
             "enabled": True,
             "manager": "rpm",
             "items": packages,
-            "command_result": packages_result,
+            "command_result": {
+                "command": packages_result["command"],
+                "returncode": packages_result["returncode"],
+                "stderr": packages_result["stderr"],
+            },
         }
     elif shutil.which("dpkg-query"):
         packages_result = run_cmd(
-            "dpkg-query -W -f='${Package};${Version}\n' | LC_ALL=C sort -t';' -k1,1"
+            "dpkg-query -W -f='${Package};${Version}\\n' | LC_ALL=C sort -t';' -k1,1"
         )
         packages = []
         for line in split_nonempty_lines(packages_result["stdout"]):
@@ -409,7 +413,11 @@ if COLLECT_PACKAGES:
             "enabled": True,
             "manager": "dpkg",
             "items": packages,
-            "command_result": packages_result,
+            "command_result": {
+                "command": packages_result["command"],
+                "returncode": packages_result["returncode"],
+                "stderr": packages_result["stderr"],
+            },
         }
     else:
         report["packages"] = {
