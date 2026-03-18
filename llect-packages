@@ -1,0 +1,278 @@
+================================================================================
+HOST INFORMATION
+================================================================================
+  Hostname (short):  bind.ridewood.co.uk
+  Hostname (FQDN):   bind.ridewood.co.uk
+  System:            Linux
+  OS:                Debian GNU/Linux 12 (bookworm)
+  Uptime:            2 hours, 35 minutes
+
+================================================================================
+LOGIN: Last 20 logins
+================================================================================
+  paddee   pts/0        beastie          Wed Mar 18 12:27   still logged in
+  reboot   system boot  0.0.0.0          Wed Mar 18 12:16   still running
+  paddee   pts/0        beastie          Mon Mar  2 15:29 - 20:33  (05:03)
+  reboot   system boot  0.0.0.0          Mon Mar  2 15:28   still running
+  paddee   pts/0        beastie          Mon Mar  2 14:50 - 15:28  (00:37)
+  paddee   pts/0        beastie          Mon Mar  2 10:52 - 12:13  (01:20)
+  reboot   system boot  0.0.0.0          Mon Mar  2 10:52 - 15:28  (04:35)
+  paddee   pts/0        beastie          Mon Mar  2 10:48 - 10:52  (00:03)
+  paddee   pts/0        beastie          Mon Feb  9 17:55 - 18:03  (00:08)
+  paddee   pts/0        beastie          Mon Feb  9 14:09 - 15:08  (00:59)
+  paddee   pts/0        beastie          Wed Jan 28 12:15 - 13:13  (00:58)
+  paddee   pts/0        beastie          Mon Jan 26 18:24 - 19:45  (01:21)
+  paddee   pts/0        beastie          Mon Jan 26 14:47 - 17:12  (02:24)
+  paddee   pts/0        beastie          Mon Jan 26 00:05 - 00:36  (00:31)
+  reboot   system boot  0.0.0.0          Mon Jan 26 00:04 - 10:52 (35+10:47)
+  paddee   pts/0        beastie          Sun Jan 25 23:49 - 00:04  (00:15)
+  paddee   pts/1        192.168.0.81     Sun Jan 25 17:41 - 17:41  (00:00)
+  paddee   pts/0        192.168.0.81     Sun Jan 25 17:32 - 22:05  (04:33)
+  reboot   system boot  0.0.0.0          Sat Jan 24 19:16 - 00:04 (1+04:47)
+  paddee   pts/0        beastie          Fri Jan 23 17:14 - 17:31  (00:16)
+  
+  wtmp begins Tue Oct 10 05:06:08 2023
+
+================================================================================
+MEMORY: System Memory Info
+================================================================================
+  MemTotal Memory:                           3888060 KB
+  SwapTotal Memory:                           204796 KB
+  VmallocTotal Memory:                     261087232 KB
+  CmaTotal Memory:                            524288 KB
+
+
+DMI: info
+DMI: # dmidecode 3.4
+DMI: # No SMBIOS nor DMI entry point found, sorry.
+================================================================================
+DISK USAGE: File System Utilization
+================================================================================
+Filesystem                 Size       Used  Available     Use%  Mounted on
+udev                       1.6G          0       1.6G       0%  /dev
+tmpfs                      760M       1.2M       759M       1%  /run
+/dev/mmcblk0p2              58G        13G        43G      23%  /
+tmpfs                      1.9G       2.2M       1.9G       1%  /dev/shm
+tmpfs                      5.0M        12K       5.0M       1%  /run/lock
+/dev/mmcblk0p1             510M        78M       433M      16%  /boot/firmware
+tmpfs                      380M        68K       380M       1%  /run/user/1000
+
+================================================================================
+DELL: Hardware Status
+================================================================================
+  Raspberry Pi Hardware Status:
+    Temperature: temp=36.0'C
+    CPU Clock: frequency(48)=800191424
+    Voltage: volt=0.8688V
+
+================================================================================
+NETWORK INTERFACES
+================================================================================
+  2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP group default qlen 1000
+      link/ether dc:a6:32:9f:7f:54 brd ff:ff:ff:ff:ff:ff
+      inet 192.168.0.43/24 brd 192.168.0.255 scope global dynamic noprefixroute eth0
+         valid_lft 2631sec preferred_lft 2631sec
+      inet6 fddd:4c62:cbe0:b7f8:5cb0:67a7:43dc:dc80/64 scope global dynamic noprefixroute 
+         valid_lft 1602sec preferred_lft 1602sec
+      inet6 fe80::325c:27db:4de4:f829/64 scope link noprefixroute 
+         valid_lft forever preferred_lft forever
+  3: wlan0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+      link/ether dc:a6:32:9f:7f:55 brd ff:ff:ff:ff:ff:ff
+      inet 192.168.0.44/24 brd 192.168.0.255 scope global dynamic noprefixroute wlan0
+         valid_lft 2766sec preferred_lft 2766sec
+      inet6 fddd:4c62:cbe0:b7f8:9390:a2b8:dcd6:63ee/64 scope global dynamic noprefixroute 
+         valid_lft 1602sec preferred_lft 1602sec
+      inet6 fe80::5159:ddb4:5fd9:20ff/64 scope link noprefixroute 
+         valid_lft forever preferred_lft forever
+
+================================================================================
+ROUTING: Route Table
+================================================================================
+Destination                              Gateway         Interface 
+default                                  192.168.0.1     eth0      
+default                                  192.168.0.1     wlan0     
+192.168.0.0/24                           eth0            kernel    
+192.168.0.0/24                           wlan0           kernel    
+
+================================================================================
+USERS: System Users (UID > 99)
+================================================================================
+messagebus        UID:100    GID:107    /usr/sbin/nologin
+_rpc              UID:101    GID:65534  /usr/sbin/nologin
+sshd              UID:102    GID:65534  /usr/sbin/nologin
+statd             UID:103    GID:65534  /usr/sbin/nologin
+avahi             UID:104    GID:110    /usr/sbin/nologin
+dnsmasq           UID:105    GID:65534  /usr/sbin/nologin
+lightdm           UID:106    GID:111    /bin/false
+rtkit             UID:107    GID:112    /usr/sbin/nologin
+pulse             UID:108    GID:117    /usr/sbin/nologin
+saned             UID:109    GID:120    /usr/sbin/nologin
+colord            UID:110    GID:121    /usr/sbin/nologin
+hplip             UID:111    GID:7      /bin/false
+tcpdump           UID:112    GID:122    /usr/sbin/nologin
+xrdp              UID:113    GID:123    /usr/sbin/nologin
+puppet            UID:114    GID:124    /usr/sbin/nologin
+systemd-resolve   UID:989    GID:989    /usr/sbin/nologin
+vnc               UID:992    GID:992    /usr/sbin/nologin
+pihole            UID:995    GID:1004   /usr/sbin/nologin
+polkitd           UID:996    GID:996    /usr/sbin/nologin
+systemd-timesync  UID:997    GID:997    /usr/sbin/nologin
+systemd-network   UID:998    GID:998    /usr/sbin/nologin
+vault             UID:999    GID:991    /bin/false
+paddee            UID:1000   GID:1000   /bin/bash
+ansible           UID:1001   GID:1001   /bin/bash
+windows           UID:1002   GID:1003   /bin/bash
+nobody            UID:65534  GID:65534  /usr/sbin/nologin
+
+================================================================================
+SUDO: Sudoers Configuration
+================================================================================
+  Sudoers Rules:
+    /etc/sudoers:root	ALL=(ALL:ALL) ALL
+    /etc/sudoers:%sudo	ALL=(ALL:ALL) ALL
+    /etc/sudoers:%wheel	ALL=(ALL:ALL) ALL
+    /etc/sudoers:@includedir /etc/sudoers.d
+    /etc/sudoers.d/010_pi-nopasswd:paddee  ALL=(ALL) NOPASSWD: ALL
+    /etc/sudoers.d/010_pi-nopasswd:ansible ALL=(ALL) NOPASSWD: ALL
+
+  Sudoers Groups:
+    sudo:x:27:paddee
+
+
+NTP: conf (peers and servers only)
+NTP: NTP: No NTP/Chrony configuration found
+================================================================================
+SECURITY: Configuration & Settings
+================================================================================
+  SSL/TLS Ciphers (unique):
+    TLSv1.2
+    TLSv1.3
+
+  Firewall Status (firewalld):
+    public (active)
+      target: default
+      icmp-block-inversion: no
+      interfaces: eth0 wlan0
+      sources: 
+      services: dhcp dhcpv6 dns http https ntp
+      ports: 8080/tcp 8123/tcp
+      protocols: 
+      forward: yes
+      masquerade: no
+      forward-ports: 
+      source-ports: 
+      icmp-blocks: 
+      rich rules: 
+    	rule family="ipv4" port port="67" protocol="udp" drop
+    	rule family="ipv4" source address="192.168.0.0/16" port port="22" protocol="tcp" accept
+    	rule family="ipv4" port port="67" protocol="tcp" drop
+    	rule family="ipv4" source address="192.168.0.0/16" port port="3389" protocol="tcp" accept
+    	rule family="ipv4" source address="192.168.0.0/16" port port="53" protocol="tcp" accept
+    	rule family="ipv4" source address="192.168.0.0/16" port port="53" protocol="udp" accept
+
+  IPTables Rules (sample):
+    Chain INPUT (policy ACCEPT 0 packets, 0 bytes)
+     pkts bytes target     prot opt in     out     source               destination         
+    
+    Chain FORWARD (policy ACCEPT 0 packets, 0 bytes)
+     pkts bytes target     prot opt in     out     source               destination         
+    
+    Chain OUTPUT (policy ACCEPT 0 packets, 0 bytes)
+     pkts bytes target     prot opt in     out     source               destination         
+
+================================================================================
+SERVICES: Listening Ports
+================================================================================
+  Proto      Local Address                  Process                                           
+  LISTEN     0.0.0.0:8081                                                                     
+  LISTEN     0.0.0.0:8080                                                                     
+  LISTEN     0.0.0.0:53                                                                       
+  LISTEN     0.0.0.0:22                                                                       
+  LISTEN     0.0.0.0:80                                                                       
+  LISTEN     127.0.0.1:41987                                                                  
+  LISTEN     0.0.0.0:443                                                                      
+  LISTEN     *:3389                                                                           
+  LISTEN     [::]:53                                                                          
+  LISTEN     [::ffff:127.0.0.1]:3350                                                          
+
+
+================================================================================
+PACKAGES: Installed
+================================================================================
+  Name                                               Version                  
+  ---                                                ---                      
+  accountsservice                                    22.08.8-6                
+  acl                                                2.3.1-3                  
+  adduser                                            3.134                    
+  adwaita-icon-theme                                 43-1                     
+  agnostics                                          0.20                     
+  alacarte                                           3.44.2-1+rpt1            
+  alsa-topology-conf                                 1.2.5.1-2                
+  alsa-ucm-conf                                      1.2.8-1                  
+  alsa-utils                                         1.2.8-1+rpt1             
+  apparmor                                           3.0.8-3                  
+  apt                                                2.6.1                    
+  apt-listchanges                                    3.24                     
+  apt-utils                                          2.6.1                    
+  aspell                                             0.60.8-4+b1              
+  aspell-en                                          2020.12.07-0-1           
+  at-spi2-common                                     2.50.0-1~bpo12+rpt1      
+  autotouch                                          0.1                      
+  avahi-daemon                                       0.8-10+deb12u1           
+  avahi-utils                                        0.8-10+deb12u1           
+  base-files                                         12.4+deb12u13            
+  base-passwd                                        3.6.1                    
+  bash                                               5.2.15-2+b10             
+  bash-completion                                    1:2.11-6                 
+  bc                                                 1.07.1-3                 
+  bind9-dnsutils                                     1:9.18.44-1~deb12u1      
+  bind9-host                                         1:9.18.44-1~deb12u1      
+  bind9-libs                                         1:9.18.44-1~deb12u1      
+  binutils                                           2.40-2                   
+  binutils-aarch64-linux-gnu                         2.40-2                   
+  binutils-common                                    2.40-2                   
+  blt                                                2.5.3+dfsg-4.1           
+  bluez                                              5.66-1+rpt1+deb12u2      
+  bluez-firmware                                     1.2-9+rpt4               
+  boot-repair                                        4ppa2088                 
+  boot-sav                                           4ppa2088                 
+  boot-sav-extra                                     4ppa2088                 
+  bsdextrautils                                      2.38.1-5+deb12u3         
+  bsdutils                                           1:2.38.1-5+deb12u3       
+  bubblewrap                                         0.8.0-2+deb12u1          
+  build-essential                                    12.9                     
+  busybox                                            1:1.35.0-4+b7            
+  bzip2                                              1.0.8-5+b1               
+  ca-certificates                                    20230311+deb12u1         
+  ca-certificates-java                               20230710~deb12u1         
+  chromium-browser                                   116.0.5845.102-rpt1      
+  cifs-utils                                         2:7.0-2                  
+  colord                                             1.4.6-2.2                
+  colord-data                                        1.4.6-2.2                
+  console-setup                                      1.221rpt1                
+  console-setup-linux                                1.221rpt1                
+
+================================================================================
+ERROR LOGS: Recent Errors & Warnings
+================================================================================
+  Syslog Errors from Today:
+    Mar 18 12:25:11 bind.ridewood.co.uk bluetoothd[490]: src/plugin.c:plugin_init() Failed to init vcp plugin
+    Mar 18 12:25:11 bind.ridewood.co.uk bluetoothd[490]: src/plugin.c:plugin_init() Failed to init mcp plugin
+    Mar 18 12:25:11 bind.ridewood.co.uk bluetoothd[490]: src/plugin.c:plugin_init() Failed to init bap plugin
+    Mar 18 12:25:11 bind.ridewood.co.uk bluetoothd[490]: profiles/sap/server.c:sap_server_register() Sap driver initialization failed.
+    Mar 18 12:25:11 bind.ridewood.co.uk bluetoothd[490]: sap-server: Operation not permitted (1)
+    Mar 18 12:25:11 bind.ridewood.co.uk bluetoothd[490]: Failed to set mode: Failed (0x03)
+    Mar 18 12:25:14 bind.ridewood.co.uk wpa_supplicant[623]: nl80211: kernel reports: Registration to specific type not supported
+    Mar 18 12:25:17 bind.ridewood.co.uk wpa_supplicant[623]: bgscan simple: Failed to enable signal strength monitoring
+
+  Boot Log Errors & Warnings from Yesterday:
+    Mar 18 12:17:02 bind.ridewood.co.uk kernel: snd_bcm2835: module is from the staging directory, the quality is unknown, you have been warned.
+    Mar 18 12:17:03 bind.ridewood.co.uk kernel: vc_sm_cma: module is from the staging directory, the quality is unknown, you have been warned.
+    Mar 18 12:17:03 bind.ridewood.co.uk kernel: bcm2835_mmal_vchiq: module is from the staging directory, the quality is unknown, you have been warned.
+    Mar 18 12:17:03 bind.ridewood.co.uk kernel: bcm2835_isp: module is from the staging directory, the quality is unknown, you have been warned.
+    Mar 18 12:17:03 bind.ridewood.co.uk kernel: bcm2835_codec: module is from the staging directory, the quality is unknown, you have been warned.
+    Mar 18 12:17:03 bind.ridewood.co.uk kernel: bcm2835_v4l2: module is from the staging directory, the quality is unknown, you have been warned.
+
+================================================================================
+Report generated: 2026-03-18 15:01:26
+================================================================================
