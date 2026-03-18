@@ -26,4 +26,4 @@ done
 # Run the script and redirect output to the log file
 # script lives in same dir as run_daic.sh
 ./daic.sh -c > "$LOG_DIR/${LOG_PREFIX}.log" 2>&1
-
+./daic_json.py >> "$LOG_DIR/${LOG_PREFIX}.json" 2>&1
