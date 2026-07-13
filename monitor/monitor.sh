@@ -3,102 +3,115 @@
 # Output HTML file
 OUTPUT_FILE="/opt/monitoring/www/html/index.html"
 
-# Ensure target directory exists
-mkdir -p "$(dirname "$OUTPUT_FILE")"
+# Upstream DNS servers to test
+DNS_UPSTREAMS="208.67.222.222 1.1.1.1 9.9.9.9"
+
+check_dns() {
+  local server="$1"
+  local udp_status="FAIL"
+  local tcp_status="FAIL"
+
+  if command -v dig >/dev/null 2>&1; then
+    # Query a stable public domain to validate recursive resolution.
+    if dig @"$server" cloudflare.com +short +time=2 +tries=1 >/dev/null 2>&1; then
+      udp_status="OK"
+    fi
+    if dig +tcp @"$server" cloudflare.com +short +time=3 +tries=1 >/dev/null 2>&1; then
+      tcp_status="OK"
+    fi
+  else
+    udp_status="N/A (dig missing)"
+    tcp_status="N/A (dig missing)"
+  fi
+
+  echo "$server|$udp_status|$tcp_status"
+}
 
 # Collect system information
 HOSTNAME=$(hostname)
 UPTIME=$(uptime -p)
-CPU_LOAD=$(cut -d' ' -f1-3 /proc/loadavg)
+CPU_LOAD=$(uptime | sed 's/.*load average: //')
 MEMORY_USAGE=$(free -m | awk 'NR==2{printf "%.2f%%", $3*100/$2 }')
 DISK_USAGE=$(df -h / | awk 'NR==2 {print $5}')
-NETWORK_INTERFACES=$(ip -o -4 addr show | awk '{print $2 " - " $4}')
-THROTTLE=$(/usr/bin/vcgencmd get_throttled)
-# Check for CPU throttling
-#    Bit   Meaning
-#   ----  ------------------------------------
-#    0    Under-voltage detected
-#    1    Arm frequency capped
-#    2    Currently throttled
-#    3    Soft temperature limit active
-#   16    Under-voltage has occurred
-#   17    Arm frequency capping has occurred
-#   18    Throttling has occurred
-#   19    Soft temperature limit has occurred
-
-# Extract hex value and check each bit
-THROTTLE_HEX=$(echo "$THROTTLE" | sed -n 's/.*throttled=\(0x[0-9a-fA-F]*\).*/\1/p')
-THROTTLE_DEC=$((THROTTLE_HEX))
-
-THROTTLE_MSG=""
-[ $((THROTTLE_DEC & (1 << 0))) -ne 0 ] && THROTTLE_MSG="${THROTTLE_MSG}• Under-voltage detected\n"
-[ $((THROTTLE_DEC & (1 << 1))) -ne 0 ] && THROTTLE_MSG="${THROTTLE_MSG}• Arm frequency capped\n"
-[ $((THROTTLE_DEC & (1 << 2))) -ne 0 ] && THROTTLE_MSG="${THROTTLE_MSG}• Currently throttled\n"
-[ $((THROTTLE_DEC & (1 << 3))) -ne 0 ] && THROTTLE_MSG="${THROTTLE_MSG}• Soft temperature limit active\n"
-[ $((THROTTLE_DEC & (1 << 16))) -ne 0 ] && THROTTLE_MSG="${THROTTLE_MSG}• Under-voltage has occurred\n"
-[ $((THROTTLE_DEC & (1 << 17))) -ne 0 ] && THROTTLE_MSG="${THROTTLE_MSG}• Arm frequency capping has occurred\n"
-[ $((THROTTLE_DEC & (1 << 18))) -ne 0 ] && THROTTLE_MSG="${THROTTLE_MSG}• Throttling has occurred\n"
-[ $((THROTTLE_DEC & (1 << 19))) -ne 0 ] && THROTTLE_MSG="${THROTTLE_MSG}• Soft temperature limit has occurred\n"
-# If no issues, set a default message
-[ -z "$THROTTLE_MSG" ] && THROTTLE_MSG="No throttling detected."
+PI_TEMP=$(vcgencmd measure_temp | cut -d'=' -f2 | cut -d"'" -f1)
+PI_VOLT=$(vcgencmd measure_volts core | cut -d'=' -f2 | cut -d'V' -f1)
+NETWORK_INTERFACES=$(ip -o -4 addr show | awk '$2 == "wlan0" || $2 == "eth0" {print $2 " " $4}')
 
 # Start HTML content
-cat > "$OUTPUT_FILE" <<'EOF'
-<html>
+echo "<html>
 <head>
 <title>System Monitoring Report</title>
-<meta http-equiv="refresh" content="30">
+<meta http-equiv='refresh' content='30'>
 <style>
   body { font-family: Arial, sans-serif; margin: 20px; }
   h2 { color: #333; }
+  h3 { color: #333; margin-top: 28px; }
   table { width: 100%; border-collapse: collapse; margin-top: 20px; }
   th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
   th { background-color: #f4f4f4; }
+  .ok { color: #176d2f; font-weight: 600; }
+  .fail { color: #aa1e1e; font-weight: 600; }
+  .na { color: #555; font-weight: 600; }
 </style>
 </head>
 <body>
 <h2>System Monitoring Report</h2>
-  <p><strong>Hostname:</strong>              HOSTNAME_VAL</p>
-  <p><strong>Uptime:</strong>                UPTIME_VAL</p>
-  <p><strong>CPU Throttling Status:</strong></p>
-  <pre>THROTTLE_MSG</pre>
-
+<p><strong>Hostname:</strong> $HOSTNAME</p>
+<p><strong>Uptime:</strong> $UPTIME</p>
 <table>
-  <tr><th>Metric</th><th>Value</th></tr>
-  <tr><td>CPU Load (1, 5, 15 min)</td>      <td>CPU_LOAD_VAL</td></tr>
-  <tr><td>Memory Usage</td>                 <td>MEMORY_USAGE_VAL</td></tr>
-  <tr><td>Disk Usage (Root Partition)</td>  <td>DISK_USAGE_VAL</td></tr>
-  <tr><td>Network Interfaces</td><td><ul>
+<tr><th>Metric</th><th>Value</th></tr>
+<tr><td>CPU Load (1, 5, 15 min)</td><td>$CPU_LOAD</td></tr>
+<tr><td>Memory Usage</td><td>$MEMORY_USAGE</td></tr>
+<tr><td>Disk Usage (Root Partition)</td><td>$DISK_USAGE</td></tr>
+<tr><td>Temperature</td><td>$PI_TEMP &deg;C</td></tr>
+<tr><td>Core Voltage</td><td>$PI_VOLT V</td></tr>
+<tr><td>Uptime</td><td>$UPTIME</td></tr>
+<tr><td>Network Interfaces</td><td><ul>" > "$OUTPUT_FILE"
+
+# Add network interfaces to the HTML file
+while IFS= read -r iface; do
+  [ -n "$iface" ] && echo "<li>$iface</li>"
+done <<EOF >> "$OUTPUT_FILE"
+$NETWORK_INTERFACES
 EOF
 
-# Inject dynamic values into placeholders
-sed -i \
-  -e "s/HOSTNAME_VAL/$HOSTNAME/" \
-  -e "s/UPTIME_VAL/$UPTIME/" \
-  -e "s/CPU_LOAD_VAL/$CPU_LOAD/" \
-  -e "s/MEMORY_USAGE_VAL/$MEMORY_USAGE/" \
-  -e "s/DISK_USAGE_VAL/$DISK_USAGE/" \
-  -e "s/THROTTLE_MSG/$THROTTLE_MSG/" \
-  "$OUTPUT_FILE"
-
-    # Add network interfaces without breaking on spaces
-    while IFS= read -r iface; do
-      echo "<li>$iface</li>" >> "$OUTPUT_FILE"
-    done <<< "$NETWORK_INTERFACES"
-
-cat >> "$OUTPUT_FILE" <<'EOF'
-</ul></td></tr>
+echo "</ul></td></tr>
 </table>
-<p>Report generated on: DATE_VAL</p>
-</body>
-</html>
-EOF
+<h3>DNS Upstream Health</h3>
+<table>
+<tr><th>Upstream</th><th>UDP 53</th><th>TCP 53</th></tr>" >> "$OUTPUT_FILE"
 
-# Add timestamp
-sed -i "s/DATE_VAL/$(date)/" "$OUTPUT_FILE"
+for server in $DNS_UPSTREAMS; do
+  result=$(check_dns "$server")
+  upstream=$(echo "$result" | awk -F'|' '{print $1}')
+  udp=$(echo "$result" | awk -F'|' '{print $2}')
+  tcp=$(echo "$result" | awk -F'|' '{print $3}')
+
+  udp_class="fail"
+  tcp_class="fail"
+
+  if [[ "$udp" == "OK" ]]; then
+    udp_class="ok"
+  elif [[ "$udp" == N/A* ]]; then
+    udp_class="na"
+  fi
+
+  if [[ "$tcp" == "OK" ]]; then
+    tcp_class="ok"
+  elif [[ "$tcp" == N/A* ]]; then
+    tcp_class="na"
+  fi
+
+  echo "<tr><td>$upstream</td><td class='$udp_class'>$udp</td><td class='$tcp_class'>$tcp</td></tr>" >> "$OUTPUT_FILE"
+done
+
+echo "</table>
+<p>Report generated on: $(date)</p>
+</body>
+</html>" >> "$OUTPUT_FILE"
 
 # Set correct permissions
-chmod 644 $OUTPUT_FILE
+chmod 644 "$OUTPUT_FILE"
 
 # Display message
 #echo "System report generated at $OUTPUT_FILE"
