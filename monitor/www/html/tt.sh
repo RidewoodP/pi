@@ -16,8 +16,9 @@ timestamp=$(date +"%Y-%m-%d %H:%M:%S")
 cpu_usage=$(top -bn1 | grep "Cpu(s)" | awk '{print 100 - $8}')
 mem_usage=$(free -m | awk 'NR==2{printf "%.2f", $3*100/$2 }')
 disk_usage=$(df -h / | awk 'NR==2 {print $5}' | tr -d '%')
-#pi_temp=$(/usr/bin/vcgencmd measure_temp | cut -f2 -d=)
-pi_temp=$(/usr/bin/vcgencmd measure_temp | cut -f2 -d= | sed "s/.C//" )
+# Parse temp=39.4'C into 39.4; fall back to n/a if vcgencmd returns nothing usable.
+pi_temp=$(/usr/bin/vcgencmd measure_temp 2>/dev/null | cut -d'=' -f2 | cut -d"'" -f1)
+[ -z "$pi_temp" ] && pi_temp="n/a"
 echo "$timestamp,$cpu_usage,$mem_usage,$disk_usage,$pi_temp" >> "$LOG_FILE"
 
 /opt/monitoring/csv_to_json.py
