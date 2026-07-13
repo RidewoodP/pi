@@ -7,11 +7,12 @@ OUTPUT_FILE="/opt/monitoring/www/html/index.html"
 DNS_UPSTREAMS="208.67.222.222 1.1.1.1 9.9.9.9"
 
 append_throttle_message() {
-  local mask="$1"
-  local text="$2"
+  local target_var="$1"
+  local mask="$2"
+  local text="$3"
 
   if (( THROTTLE_DEC & mask )); then
-    THROTTLE_MESSAGES+="${text}"$'\n'
+    printf -v "$target_var" '%s%s\n' "${!target_var}" "$text"
   fi
 }
 
@@ -52,17 +53,26 @@ if [ -n "$THROTTLE_HEX" ]; then
   THROTTLE_DEC=$((THROTTLE_HEX))
 else
   THROTTLE_DEC=0
+  THROTTLE_HEX="0x0"
 fi
 
-THROTTLE_MESSAGES=""
-append_throttle_message $((1 << 0)) "Under-voltage detected"
-append_throttle_message $((1 << 1)) "Arm frequency capped"
-append_throttle_message $((1 << 2)) "Currently throttled"
-append_throttle_message $((1 << 3)) "Soft temperature limit active"
-append_throttle_message $((1 << 16)) "Under-voltage has occurred"
-append_throttle_message $((1 << 17)) "Arm frequency capping has occurred"
-append_throttle_message $((1 << 18)) "Throttling has occurred"
-append_throttle_message $((1 << 19)) "Soft temperature limit has occurred"
+THROTTLE_CURRENT=""
+THROTTLE_HISTORY=""
+append_throttle_message THROTTLE_CURRENT $((1 << 0)) "Under-voltage detected now"
+append_throttle_message THROTTLE_CURRENT $((1 << 1)) "Arm frequency capped now"
+append_throttle_message THROTTLE_CURRENT $((1 << 2)) "Currently throttled"
+append_throttle_message THROTTLE_CURRENT $((1 << 3)) "Soft temperature limit active now"
+append_throttle_message THROTTLE_HISTORY $((1 << 16)) "Under-voltage has occurred since boot"
+append_throttle_message THROTTLE_HISTORY $((1 << 17)) "Arm frequency capping has occurred since boot"
+append_throttle_message THROTTLE_HISTORY $((1 << 18)) "Throttling has occurred since boot"
+append_throttle_message THROTTLE_HISTORY $((1 << 19)) "Soft temperature limit has occurred since boot"
+
+THROTTLE_SUMMARY="No throttling detected"
+if [ -n "$THROTTLE_CURRENT" ]; then
+  THROTTLE_SUMMARY="Active throttling or power issue"
+elif [ -n "$THROTTLE_HISTORY" ]; then
+  THROTTLE_SUMMARY="No active issue, but historical events recorded"
+fi
 
 # Start HTML content
 echo "<html>
@@ -86,17 +96,33 @@ echo "<html>
 <h2>System Monitoring Report</h2>
 <p><strong>Hostname:</strong> $HOSTNAME</p>
 <p><strong>Uptime:</strong> $UPTIME</p>
-<p><strong>CPU Throttling Status:</strong></p>
+<p><strong>CPU Throttling Status:</strong> $THROTTLE_SUMMARY</p>
 <ul>" > "$OUTPUT_FILE"
 
-if [ -n "$THROTTLE_MESSAGES" ]; then
+echo "<li>Raw status: $THROTTLE_HEX</li>" >> "$OUTPUT_FILE"
+
+if [ -n "$THROTTLE_CURRENT" ]; then
+  echo "<li>Active flags:<ul>" >> "$OUTPUT_FILE"
   while IFS= read -r throttle_msg; do
     [ -n "$throttle_msg" ] && echo "<li>$throttle_msg</li>"
   done <<EOF >> "$OUTPUT_FILE"
-$THROTTLE_MESSAGES
+$THROTTLE_CURRENT
 EOF
+  echo "</ul></li>" >> "$OUTPUT_FILE"
 else
-  echo "<li>No throttling detected.</li>" >> "$OUTPUT_FILE"
+  echo "<li>Active flags: none</li>" >> "$OUTPUT_FILE"
+fi
+
+if [ -n "$THROTTLE_HISTORY" ]; then
+  echo "<li>Historical flags:<ul>" >> "$OUTPUT_FILE"
+  while IFS= read -r throttle_msg; do
+    [ -n "$throttle_msg" ] && echo "<li>$throttle_msg</li>"
+  done <<EOF >> "$OUTPUT_FILE"
+$THROTTLE_HISTORY
+EOF
+  echo "</ul></li>" >> "$OUTPUT_FILE"
+else
+  echo "<li>Historical flags: none</li>" >> "$OUTPUT_FILE"
 fi
 
 echo "</ul>
