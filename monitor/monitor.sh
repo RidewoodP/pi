@@ -83,6 +83,9 @@ echo "<html>
 <style>
   body { font-family: Arial, sans-serif; margin: 20px; }
   h2 { color: #333; }
+  .report-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+  .report-heading h2 { margin: 0; }
+  .report-heading a { color: #176d2f; font-weight: 600; }
   h3 { color: #333; margin-top: 28px; }
   table { width: 100%; border-collapse: collapse; margin-top: 20px; }
   th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
@@ -93,7 +96,7 @@ echo "<html>
 </style>
 </head>
 <body>
-<h2>System Monitoring Report</h2>
+<div class='report-heading'><h2>System Monitoring Report</h2><a href='/network.html'>Network inventory</a></div>
 <p><strong>Hostname:</strong> $HOSTNAME</p>
 <p><strong>Uptime:</strong> $UPTIME</p>
 <p><strong>CPU Throttling Status:</strong> $THROTTLE_SUMMARY</p>
