@@ -42,30 +42,39 @@ metric_chart() {
   local column="$1"
   local label="$2"
   local tone="$3"
+  local cutoff="$4"
+  local timezone="$5"
   if [ ! -r "$METRICS_LOG" ]; then
     printf '<span class="trend-empty">No metric history available</span>'
     return
   fi
-  tail -n 12 "$METRICS_LOG" | awk -F',' -v column="$column" -v label="$label" -v tone="$tone" '
+  awk -F',' -v column="$column" -v label="$label" -v tone="$tone" -v cutoff="$cutoff" -v timezone="$timezone" '
+    NR == 1 { next }
     {
+      if ($1 < cutoff) next
       value = $column
       gsub(/%/, "", value)
-      if (value ~ /^[0-9]+([.][0-9]+)?$/) values[++count] = value + 0
+      if (value ~ /^[0-9]+([.][0-9]+)?$/) {
+        values[++count] = value + 0
+        times[count] = $1
+      }
     }
     END {
       if (!count) {
-        print "<span class=\"trend-empty\">No metric history available</span>"
+        print "<span class=\"trend-empty\">No samples in the last 24 hours</span>"
         exit
       }
-      printf "<div class=\"sparkline\" role=\"img\" aria-label=\"Recent %s trend, oldest to newest\">", label
+      printf "<div class=\"sparkline\" data-trend-label=\"%s\" role=\"img\" aria-label=\"Recent %s trend\">", tone, label
       for (sample = 1; sample <= count; sample++) {
         height = values[sample]
+        sample_time = times[sample]
+        sub(/ /, "T", sample_time)
         if (height < 5) height = 5
         if (height > 100) height = 100
-        printf "<span class=\"sparkline-bar %s\" style=\"height:%.0f%%\" title=\"Sample %d: %.1f%%\"></span>", tone, height, sample, values[sample]
+        printf "<span class=\"sparkline-bar %s\" data-sample-time=\"%s%s\" data-sample-value=\"%.2f\" style=\"height:%.0f%%\" title=\"%s: %.1f%%\"></span>", tone, sample_time, timezone, values[sample], height, times[sample], values[sample]
       }
       printf "</div>"
-    }'
+    }' "$METRICS_LOG"
 }
 
 # Collect system information
@@ -105,9 +114,11 @@ elif [ -n "$THROTTLE_HISTORY" ]; then
   THROTTLE_SUMMARY="No active issue, but historical events recorded"
 fi
 
-CPU_TREND=$(metric_chart 2 "CPU usage" "cpu")
-MEMORY_TREND=$(metric_chart 3 "Memory usage" "memory")
-DISK_TREND=$(metric_chart 4 "Disk usage" "disk")
+TREND_CUTOFF=$(date -d '24 hours ago' '+%Y-%m-%d %H:%M:%S')
+TREND_TIMEZONE=$(date '+%:z')
+CPU_TREND=$(metric_chart 2 "CPU usage" "cpu" "$TREND_CUTOFF" "$TREND_TIMEZONE")
+MEMORY_TREND=$(metric_chart 3 "Memory usage" "memory" "$TREND_CUTOFF" "$TREND_TIMEZONE")
+DISK_TREND=$(metric_chart 4 "Disk usage" "disk" "$TREND_CUTOFF" "$TREND_TIMEZONE")
 
 FAILED_CHECK_AVAILABLE=0
 FAILED_UNITS=""
@@ -198,9 +209,12 @@ main { max-width: 1400px; margin: 26px auto; padding: 0 20px 36px; }
 .metric-value { margin-top: 5px; font-size: 22px; font-weight: 700; line-height: 1.2; overflow-wrap: anywhere; }
 .metric-detail { margin-top: 5px; color: var(--muted); font-size: 11px; }
 .trend-panel { margin-bottom: 14px; }
-.trend-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 12px; }
+.trend-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 18px; }
 .trend-heading h3 { margin: 0; }
-.trend-heading p { margin: 0; color: var(--muted); font-size: 12px; }
+.trend-controls { display: flex; flex-wrap: wrap; gap: 8px 12px; }
+.trend-control { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; }
+.trend-control select { min-height: 34px; padding: 5px 26px 5px 8px; border: 1px solid var(--line); border-radius: 4px; background: var(--paper); color: var(--ink); font: inherit; }
+.trend-summary { margin: 7px 0 10px; color: var(--muted); font-size: 12px; }
 .trend-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
 .trend-card { min-width: 0; }
 .trend-label { margin-bottom: 5px; color: var(--muted); font-size: 12px; font-weight: 650; }
@@ -259,7 +273,12 @@ footer { margin-top: 14px; color: var(--muted); font-size: 12px; }
   <article class="metric"><div class="metric-label">Temperature</div><div class="metric-value">$PI_TEMP <span>°C</span></div><div class="metric-detail">Board temperature</div></article>
   <article class="metric"><div class="metric-label">Core voltage</div><div class="metric-value">$PI_VOLT <span>V</span></div><div class="metric-detail">Core rail</div></article>
 </section>
-<section class="panel trend-panel"><div class="trend-heading"><h3>Recent trends</h3><p>Last 12 samples, oldest to newest</p></div>
+<section class="panel trend-panel"><div class="trend-heading"><h3>Recent trends</h3>
+<div class="trend-controls">
+  <label class="trend-control" for="trend-hours">Range<select id="trend-hours"><option value="1">1 hour</option><option value="6">6 hours</option><option value="12" selected>12 hours</option><option value="24">24 hours</option></select></label>
+  <label class="trend-control" for="trend-samples">Samples<select id="trend-samples"><option value="12">12</option><option value="24">24</option><option value="48" selected>48</option></select></label>
+</div></div>
+<p class="trend-summary" id="trend-summary">Last 12 hours · up to 48 samples</p>
 <div class="trend-grid">
   <article class="trend-card"><div class="trend-label">CPU usage</div>$CPU_TREND</article>
   <article class="trend-card"><div class="trend-label">Memory used</div>$MEMORY_TREND</article>
@@ -358,9 +377,67 @@ cat >> "$OUTPUT_FILE" <<EOF
 </section>
 <footer>Report generated on $(date '+%Y-%m-%d %H:%M:%S %Z') · Refreshes every 30 seconds</footer>
 </main>
+EOF
+
+cat >> "$OUTPUT_FILE" <<'SCRIPT'
+<script>
+(() => {
+  const hoursSelect = document.getElementById('trend-hours');
+  const samplesSelect = document.getElementById('trend-samples');
+  const summary = document.getElementById('trend-summary');
+  const validHours = new Set(['1', '6', '12', '24']);
+  const validSamples = new Set(['12', '24', '48']);
+  try {
+    const savedHours = localStorage.getItem('monitor-trend-hours');
+    const savedSamples = localStorage.getItem('monitor-trend-samples');
+    if (validHours.has(savedHours)) hoursSelect.value = savedHours;
+    if (validSamples.has(savedSamples)) samplesSelect.value = savedSamples;
+  } catch (error) { /* use defaults when storage is unavailable */ }
+
+  const updateTrends = () => {
+    const hours = Number(hoursSelect.value);
+    const sampleLimit = Number(samplesSelect.value);
+    const cutoff = Date.now() - hours * 60 * 60 * 1000;
+    const counts = [];
+    document.querySelectorAll('.sparkline').forEach((chart) => {
+      const bars = Array.from(chart.querySelectorAll('.sparkline-bar'));
+      const inRange = bars.filter((bar) => {
+        const timestamp = Date.parse(bar.dataset.sampleTime || '');
+        return Number.isFinite(timestamp) && timestamp >= cutoff;
+      });
+      const selectedIndexes = new Set();
+      if (inRange.length <= sampleLimit) {
+        inRange.forEach((_, index) => selectedIndexes.add(index));
+      } else {
+        for (let sample = 0; sample < sampleLimit; sample += 1) {
+          selectedIndexes.add(Math.round(sample * (inRange.length - 1) / (sampleLimit - 1)));
+        }
+      }
+      const selected = inRange.filter((_, index) => selectedIndexes.has(index));
+      const selectedBars = new Set(selected);
+      bars.forEach((bar) => { bar.hidden = !selectedBars.has(bar); });
+      const label = chart.closest('.trend-card').querySelector('.trend-label').textContent;
+      chart.setAttribute('aria-label', `${label} over the last ${hours} hours`);
+      counts.push(`${label}: ${selected.length}`);
+    });
+    summary.textContent = `Last ${hours} ${hours === 1 ? 'hour' : 'hours'} · ${counts.join(' · ')} samples`;
+  };
+
+  const saveSelection = () => {
+    try {
+      localStorage.setItem('monitor-trend-hours', hoursSelect.value);
+      localStorage.setItem('monitor-trend-samples', samplesSelect.value);
+    } catch (error) { /* chart controls still work without storage */ }
+    updateTrends();
+  };
+  hoursSelect.addEventListener('change', saveSelection);
+  samplesSelect.addEventListener('change', saveSelection);
+  updateTrends();
+})();
+</script>
 </body>
 </html>
-EOF
+SCRIPT
 
 # Set correct permissions
 chmod 644 "$OUTPUT_FILE"
