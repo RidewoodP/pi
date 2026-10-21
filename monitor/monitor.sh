@@ -186,12 +186,12 @@ cat > "$OUTPUT_FILE" <<EOF
 :root { color-scheme: light; --ink: #182625; --muted: #65736f; --line: #dbe4df; --paper: #fff; --canvas: #eef3f0; --green: #176d4a; --teal: #0b7165; --amber: #b75a24; --red: #a83226; }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--canvas); color: var(--ink); font: 15px/1.5 "Segoe UI", sans-serif; }
-.masthead { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 18px max(20px, calc((100vw - 1360px) / 2)); background: linear-gradient(100deg, #173b35 0%, #173b35 56%, #173b35cc 100%), url('/images/network.webp') right center / auto 100% no-repeat; color: #f5fbf8; }
+.masthead { display: flex; min-height: 174px; align-items: center; justify-content: space-between; gap: 18px; padding: 24px max(20px, calc((100vw - 1360px) / 2)); background: linear-gradient(100deg, #173b35 0%, #173b35 27%, #173b35c4 43%, #173b3560 65%, #173b3520 100%), url('/images/monitoring-header.webp') right center / 64% auto no-repeat; color: #f5fbf8; }
 .brand-mark { color: #8ed9c4; font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
 .masthead h1 { margin: 2px 0 0; font-size: 20px; }
-.masthead a { padding: 8px 12px; border: 1px solid #71968a; border-radius: 4px; color: #f5fbf8; font-weight: 600; text-decoration: none; white-space: nowrap; }
-.masthead a:hover { background: #ffffff18; }
 main { max-width: 1400px; margin: 26px auto; padding: 0 20px 36px; }
+.page-nav { display: flex; justify-content: flex-end; margin-bottom: 14px; }
+.page-nav a { color: var(--teal); font-weight: 650; text-decoration-thickness: 1px; text-underline-offset: 3px; }
 .overview { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px 24px; margin-bottom: 18px; }
 .eyebrow { margin: 0 0 4px; color: var(--teal); font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
 .overview h2 { margin: 0; font-size: 24px; }
@@ -253,15 +253,15 @@ tbody tr:last-child td { border-bottom: 0; }
 .na { color: var(--muted); }
 footer { margin-top: 14px; color: var(--muted); font-size: 12px; }
 @media (max-width: 900px) { .metric-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-@media (max-width: 640px) { .masthead { padding: 15px 16px; } .masthead h1 { font-size: 18px; } main { margin: 18px auto; padding: 0 14px 24px; } .overview h2 { font-size: 21px; } .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; } .metric { padding: 12px; } .metric-value { font-size: 19px; } .detail-grid, .trend-grid { grid-template-columns: 1fr; } .flag-grid { grid-template-columns: 1fr; } .dns-panel { overflow-x: auto; } .dns-panel table { min-width: 460px; } }
+@media (max-width: 640px) { .masthead { min-height: 145px; padding: 18px 16px; background-size: auto, 100% auto; } .masthead h1 { font-size: 18px; } main { margin: 18px auto; padding: 0 14px 24px; } .overview h2 { font-size: 21px; } .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; } .metric { padding: 12px; } .metric-value { font-size: 19px; } .detail-grid, .trend-grid { grid-template-columns: 1fr; } .flag-grid { grid-template-columns: 1fr; } .dns-panel { overflow-x: auto; } .dns-panel table { min-width: 460px; } }
 </style>
 </head>
 <body>
 <header class="masthead">
   <div><div class="brand-mark">Ridewood · Systems</div><h1>System monitor</h1></div>
-  <a href="/network.html">Network inventory</a>
 </header>
 <main>
+<nav class="page-nav" aria-label="Related pages"><a href="/network.html">Network inventory</a></nav>
 <section class="overview" aria-labelledby="host-heading">
   <div><p class="eyebrow">Live status</p><h2 id="host-heading">$HOSTNAME</h2><p class="uptime">Uptime: $UPTIME</p></div>
   <div class="health-pill $ISSUE_CLASS">$ISSUE_SUMMARY</div>
