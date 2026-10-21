@@ -5,6 +5,7 @@ OUTPUT_FILE="/opt/monitoring/www/html/index.html"
 
 # Upstream DNS servers to test
 DNS_UPSTREAMS="208.67.222.222 1.1.1.1 9.9.9.9"
+METRICS_LOG="/opt/monitoring/www/html/metrics.log"
 
 append_throttle_message() {
   local target_var="$1"
@@ -35,6 +36,36 @@ check_dns() {
   fi
 
   echo "$server|$udp_status|$tcp_status"
+}
+
+metric_chart() {
+  local column="$1"
+  local label="$2"
+  local tone="$3"
+  if [ ! -r "$METRICS_LOG" ]; then
+    printf '<span class="trend-empty">No metric history available</span>'
+    return
+  fi
+  tail -n 12 "$METRICS_LOG" | awk -F',' -v column="$column" -v label="$label" -v tone="$tone" '
+    {
+      value = $column
+      gsub(/%/, "", value)
+      if (value ~ /^[0-9]+([.][0-9]+)?$/) values[++count] = value + 0
+    }
+    END {
+      if (!count) {
+        print "<span class=\"trend-empty\">No metric history available</span>"
+        exit
+      }
+      printf "<div class=\"sparkline\" role=\"img\" aria-label=\"Recent %s trend, oldest to newest\">", label
+      for (sample = 1; sample <= count; sample++) {
+        height = values[sample]
+        if (height < 5) height = 5
+        if (height > 100) height = 100
+        printf "<span class=\"sparkline-bar %s\" style=\"height:%.0f%%\" title=\"Sample %d: %.1f%%\"></span>", tone, height, sample, values[sample]
+      }
+      printf "</div>"
+    }'
 }
 
 # Collect system information
@@ -74,89 +105,220 @@ elif [ -n "$THROTTLE_HISTORY" ]; then
   THROTTLE_SUMMARY="No active issue, but historical events recorded"
 fi
 
+CPU_TREND=$(metric_chart 2 "CPU usage" "cpu")
+MEMORY_TREND=$(metric_chart 3 "Memory usage" "memory")
+DISK_TREND=$(metric_chart 4 "Disk usage" "disk")
+
+FAILED_CHECK_AVAILABLE=0
+FAILED_UNITS=""
+if command -v systemctl >/dev/null 2>&1; then
+  FAILED_CHECK_AVAILABLE=1
+  FAILED_UNITS=$(systemctl --failed --no-legend --plain --no-pager 2>/dev/null | awk 'NF {print $1}')
+fi
+FAILED_COUNT=$(printf '%s\n' "$FAILED_UNITS" | awk 'NF {count++} END {print count+0}')
+THROTTLE_ISSUE_COUNT=$(printf '%s\n' "$THROTTLE_CURRENT" | awk 'NF {count++} END {print count+0}')
+
+DNS_RESULTS=""
+DNS_ISSUE_ITEMS=""
+DNS_FAILURE_COUNT=0
+for server in $DNS_UPSTREAMS; do
+  IFS='|' read -r upstream udp tcp <<< "$(check_dns "$server")"
+  DNS_RESULTS+="$upstream|$udp|$tcp"$'\n'
+  if [ "$udp" = "FAIL" ]; then
+    DNS_FAILURE_COUNT=$((DNS_FAILURE_COUNT + 1))
+    DNS_ISSUE_ITEMS+="<li>UDP DNS check failed for $upstream</li>"
+  fi
+  if [ "$tcp" = "FAIL" ]; then
+    DNS_FAILURE_COUNT=$((DNS_FAILURE_COUNT + 1))
+    DNS_ISSUE_ITEMS+="<li>TCP DNS check failed for $upstream</li>"
+  fi
+done
+
+ISSUE_COUNT=$((FAILED_COUNT + THROTTLE_ISSUE_COUNT + DNS_FAILURE_COUNT))
+ISSUE_CLASS="healthy"
+ISSUE_SUMMARY="No active failed issues"
+if [ "$ISSUE_COUNT" -gt 0 ]; then
+  ISSUE_CLASS="warning"
+  ISSUE_SUMMARY="$ISSUE_COUNT active issue(s)"
+fi
+
+FAILED_UNIT_ITEMS=""
+while IFS= read -r failed_unit; do
+  [ -n "$failed_unit" ] || continue
+  safe_unit=$(printf '%s' "$failed_unit" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g')
+  FAILED_UNIT_ITEMS+="<li>Failed systemd unit: <code>$safe_unit</code></li>"
+done <<< "$FAILED_UNITS"
+
+ISSUE_ITEMS=""
+while IFS= read -r throttle_msg; do
+  [ -n "$throttle_msg" ] && ISSUE_ITEMS+="<li>$throttle_msg</li>"
+done <<< "$THROTTLE_CURRENT"
+ISSUE_ITEMS+="$FAILED_UNIT_ITEMS$DNS_ISSUE_ITEMS"
+
 # Start HTML content
-echo "<html>
+THROTTLE_CLASS="healthy"
+if [ -n "$THROTTLE_CURRENT" ]; then
+  THROTTLE_CLASS="warning"
+fi
+
+cat > "$OUTPUT_FILE" <<EOF
+<!doctype html>
+<html lang="en">
 <head>
-<title>System Monitoring Report</title>
-<meta charset='utf-8'>
-<link rel='icon' type='image/png' sizes='64x64' href='/images/favicon.png'>
-<meta http-equiv='refresh' content='30'>
+<title>System Monitor · $HOSTNAME</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<link rel="icon" type="image/png" sizes="64x64" href="/images/favicon.png">
+<meta http-equiv="refresh" content="30">
 <style>
-  body { font-family: Arial, sans-serif; margin: 20px; }
-  h2 { color: #333; }
-  .report-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
-  .report-heading h2 { margin: 0; }
-  .report-heading a { color: #176d2f; font-weight: 600; }
-  h3 { color: #333; margin-top: 28px; }
-  table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-  th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-  th { background-color: #f4f4f4; }
-  .ok { color: #176d2f; font-weight: 600; }
-  .fail { color: #aa1e1e; font-weight: 600; }
-  .na { color: #555; font-weight: 600; }
+:root { color-scheme: light; --ink: #182625; --muted: #65736f; --line: #dbe4df; --paper: #fff; --canvas: #eef3f0; --green: #176d4a; --teal: #0b7165; --amber: #b75a24; --red: #a83226; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--canvas); color: var(--ink); font: 15px/1.5 "Segoe UI", sans-serif; }
+.masthead { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 18px max(20px, calc((100vw - 1360px) / 2)); background: linear-gradient(100deg, #173b35 0%, #173b35 56%, #173b35cc 100%), url('/images/network.webp') right center / auto 100% no-repeat; color: #f5fbf8; }
+.brand-mark { color: #8ed9c4; font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+.masthead h1 { margin: 2px 0 0; font-size: 20px; }
+.masthead a { padding: 8px 12px; border: 1px solid #71968a; border-radius: 4px; color: #f5fbf8; font-weight: 600; text-decoration: none; white-space: nowrap; }
+.masthead a:hover { background: #ffffff18; }
+main { max-width: 1400px; margin: 26px auto; padding: 0 20px 36px; }
+.overview { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px 24px; margin-bottom: 18px; }
+.eyebrow { margin: 0 0 4px; color: var(--teal); font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.overview h2 { margin: 0; font-size: 24px; }
+.uptime { margin: 3px 0 0; color: var(--muted); }
+.health-pill { max-width: 100%; padding: 9px 13px; border: 1px solid; border-radius: 4px; font-weight: 650; }
+.health-pill.healthy { border-color: #9ac7aa; background: #e6f3e9; color: #18583f; }
+.health-pill.warning { border-color: #e4b482; background: #fff0df; color: #713a16; }
+.metric-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
+.metric { min-width: 0; padding: 15px 16px; border: 1px solid var(--line); border-top: 3px solid var(--teal); border-radius: 5px; background: var(--paper); }
+.metric:nth-child(2) { border-top-color: #398a74; }
+.metric:nth-child(3) { border-top-color: #708d56; }
+.metric:nth-child(4) { border-top-color: #ce8440; }
+.metric:nth-child(5) { border-top-color: #557a9a; }
+.metric-label { color: var(--muted); font-size: 12px; font-weight: 600; }
+.metric-value { margin-top: 5px; font-size: 22px; font-weight: 700; line-height: 1.2; overflow-wrap: anywhere; }
+.metric-detail { margin-top: 5px; color: var(--muted); font-size: 11px; }
+.trend-panel { margin-bottom: 14px; }
+.trend-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 12px; }
+.trend-heading h3 { margin: 0; }
+.trend-heading p { margin: 0; color: var(--muted); font-size: 12px; }
+.trend-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.trend-card { min-width: 0; }
+.trend-label { margin-bottom: 5px; color: var(--muted); font-size: 12px; font-weight: 650; }
+.sparkline { display: flex; height: 70px; align-items: flex-end; gap: 3px; padding: 5px 0 0; border-bottom: 1px solid var(--line); }
+.sparkline-bar { flex: 1; min-width: 2px; border-radius: 2px 2px 0 0; }
+.sparkline-bar.cpu { background: #167b69; }
+.sparkline-bar.memory { background: #557a9a; }
+.sparkline-bar.disk { background: #c57938; }
+.trend-empty { color: var(--muted); font-size: 12px; }
+.detail-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, .8fr); gap: 14px; }
+.panel { min-width: 0; padding: 17px 18px; border: 1px solid var(--line); border-radius: 5px; background: var(--paper); }
+.panel h3 { margin: 0 0 12px; font-size: 16px; }
+.panel-intro { margin: -5px 0 12px; color: var(--muted); font-size: 13px; }
+.raw-status { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 0 0 14px; color: var(--muted); font-size: 13px; }
+code { padding: 2px 5px; border-radius: 3px; background: #f0f4f2; font: 12px/1.4 ui-monospace, SFMono-Regular, Consolas, monospace; }
+.flag-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.flag-grid h4 { margin: 0 0 6px; color: var(--muted); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+.flag-grid ul, .interface-list { margin: 0; padding-left: 18px; }
+.flag-grid li, .interface-list li { margin: 4px 0; }
+.empty-state { color: var(--muted); }
+.dns-panel { margin-top: 14px; }
+.issue-panel { margin-top: 14px; }
+.issue-panel h3 { margin: 0; }
+.issue-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.issue-list { margin: 12px 0 0; padding-left: 20px; }
+.issue-list li { margin: 5px 0; }
+.issue-status { font-size: 13px; font-weight: 650; }
+table { width: 100%; border-collapse: collapse; text-align: left; }
+th { padding: 10px 12px; border-bottom: 1px solid var(--line); background: #f5f8f6; color: var(--muted); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+td { padding: 11px 12px; border-bottom: 1px solid #e8eeeb; }
+tbody tr:last-child td { border-bottom: 0; }
+.status { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 650; }
+.status::before { width: 7px; height: 7px; border-radius: 50%; background: currentColor; content: ''; }
+.ok { color: var(--green); }
+.fail { color: var(--red); }
+.na { color: var(--muted); }
+footer { margin-top: 14px; color: var(--muted); font-size: 12px; }
+@media (max-width: 900px) { .metric-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .masthead { padding: 15px 16px; } .masthead h1 { font-size: 18px; } main { margin: 18px auto; padding: 0 14px 24px; } .overview h2 { font-size: 21px; } .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; } .metric { padding: 12px; } .metric-value { font-size: 19px; } .detail-grid, .trend-grid { grid-template-columns: 1fr; } .flag-grid { grid-template-columns: 1fr; } .dns-panel { overflow-x: auto; } .dns-panel table { min-width: 460px; } }
 </style>
 </head>
 <body>
-<div class='report-heading'><h2>System Monitoring Report</h2><a href='/network.html'>Network inventory</a></div>
-<p><strong>Hostname:</strong> $HOSTNAME</p>
-<p><strong>Uptime:</strong> $UPTIME</p>
-<p><strong>CPU Throttling Status:</strong> $THROTTLE_SUMMARY</p>
-<ul>" > "$OUTPUT_FILE"
-
-echo "<li>Raw status: $THROTTLE_HEX</li>" >> "$OUTPUT_FILE"
+<header class="masthead">
+  <div><div class="brand-mark">Ridewood · Systems</div><h1>System monitor</h1></div>
+  <a href="/network.html">Network inventory</a>
+</header>
+<main>
+<section class="overview" aria-labelledby="host-heading">
+  <div><p class="eyebrow">Live status</p><h2 id="host-heading">$HOSTNAME</h2><p class="uptime">Uptime: $UPTIME</p></div>
+  <div class="health-pill $ISSUE_CLASS">$ISSUE_SUMMARY</div>
+</section>
+<section class="metric-grid" aria-label="System metrics">
+  <article class="metric"><div class="metric-label">CPU load</div><div class="metric-value">$CPU_LOAD</div><div class="metric-detail">1, 5 and 15 minute averages</div></article>
+  <article class="metric"><div class="metric-label">Memory used</div><div class="metric-value">$MEMORY_USAGE</div><div class="metric-detail">Physical memory</div></article>
+  <article class="metric"><div class="metric-label">Root disk used</div><div class="metric-value">$DISK_USAGE</div><div class="metric-detail">Root partition</div></article>
+  <article class="metric"><div class="metric-label">Temperature</div><div class="metric-value">$PI_TEMP <span>°C</span></div><div class="metric-detail">Board temperature</div></article>
+  <article class="metric"><div class="metric-label">Core voltage</div><div class="metric-value">$PI_VOLT <span>V</span></div><div class="metric-detail">Core rail</div></article>
+</section>
+<section class="panel trend-panel"><div class="trend-heading"><h3>Recent trends</h3><p>Last 12 samples, oldest to newest</p></div>
+<div class="trend-grid">
+  <article class="trend-card"><div class="trend-label">CPU usage</div>$CPU_TREND</article>
+  <article class="trend-card"><div class="trend-label">Memory used</div>$MEMORY_TREND</article>
+  <article class="trend-card"><div class="trend-label">Root disk used</div>$DISK_TREND</article>
+</div></section>
+<section class="detail-grid">
+  <article class="panel"><h3>Power and throttling</h3>
+    <p class="raw-status"><span>Raw status <code>$THROTTLE_HEX</code></span><span class="status $THROTTLE_CLASS">$THROTTLE_SUMMARY</span></p>
+    <div class="flag-grid">
+      <section><h4>Active now</h4><ul>
+EOF
 
 if [ -n "$THROTTLE_CURRENT" ]; then
-  echo "<li>Active flags:<ul>" >> "$OUTPUT_FILE"
   while IFS= read -r throttle_msg; do
-    [ -n "$throttle_msg" ] && echo "<li>$throttle_msg</li>"
-  done <<EOF >> "$OUTPUT_FILE"
+    [ -n "$throttle_msg" ] && printf '<li>%s</li>\n' "$throttle_msg" >> "$OUTPUT_FILE"
+  done <<EOF
 $THROTTLE_CURRENT
 EOF
-  echo "</ul></li>" >> "$OUTPUT_FILE"
 else
-  echo "<li>Active flags: none</li>" >> "$OUTPUT_FILE"
+  printf '<li class="empty-state">No active flags</li>\n' >> "$OUTPUT_FILE"
 fi
+
+cat >> "$OUTPUT_FILE" <<EOF
+      </ul></section>
+      <section><h4>Since boot</h4><ul>
+EOF
 
 if [ -n "$THROTTLE_HISTORY" ]; then
-  echo "<li>Historical flags:<ul>" >> "$OUTPUT_FILE"
   while IFS= read -r throttle_msg; do
-    [ -n "$throttle_msg" ] && echo "<li>$throttle_msg</li>"
-  done <<EOF >> "$OUTPUT_FILE"
+    [ -n "$throttle_msg" ] && printf '<li>%s</li>\n' "$throttle_msg" >> "$OUTPUT_FILE"
+  done <<EOF
 $THROTTLE_HISTORY
 EOF
-  echo "</ul></li>" >> "$OUTPUT_FILE"
 else
-  echo "<li>Historical flags: none</li>" >> "$OUTPUT_FILE"
+  printf '<li class="empty-state">No historical flags</li>\n' >> "$OUTPUT_FILE"
 fi
 
-echo "</ul>
-<table>
-<tr><th>Metric</th><th>Value</th></tr>
-<tr><td>CPU Load (1, 5, 15 min)</td><td>$CPU_LOAD</td></tr>
-<tr><td>Memory Usage</td><td>$MEMORY_USAGE</td></tr>
-<tr><td>Disk Usage (Root Partition)</td><td>$DISK_USAGE</td></tr>
-<tr><td>Temperature</td><td>$PI_TEMP &deg;C</td></tr>
-<tr><td>Core Voltage</td><td>$PI_VOLT V</td></tr>
-<tr><td>Network Interfaces</td><td><ul>" >> "$OUTPUT_FILE"
+cat >> "$OUTPUT_FILE" <<EOF
+      </ul></section>
+    </div>
+  </article>
+  <article class="panel"><h3>Network interfaces</h3><ul class="interface-list">
+EOF
 
-# Add network interfaces to the HTML file
 while IFS= read -r iface; do
-  [ -n "$iface" ] && echo "<li>$iface</li>"
-done <<EOF >> "$OUTPUT_FILE"
+  [ -n "$iface" ] && printf '<li>%s</li>\n' "$iface" >> "$OUTPUT_FILE"
+done <<EOF
 $NETWORK_INTERFACES
 EOF
 
-echo "</ul></td></tr>
-</table>
-<h3>DNS Upstream Health</h3>
-<table>
-<tr><th>Upstream</th><th>UDP 53</th><th>TCP 53</th></tr>" >> "$OUTPUT_FILE"
+cat >> "$OUTPUT_FILE" <<EOF
+  </ul></article>
+</section>
+<section class="panel dns-panel"><h3>DNS upstream health</h3><p class="panel-intro">UDP and TCP reachability on port 53</p>
+<table><thead><tr><th scope="col">Upstream</th><th scope="col">UDP 53</th><th scope="col">TCP 53</th></tr></thead><tbody>
+EOF
 
-for server in $DNS_UPSTREAMS; do
-  result=$(check_dns "$server")
-  upstream=$(echo "$result" | awk -F'|' '{print $1}')
-  udp=$(echo "$result" | awk -F'|' '{print $2}')
-  tcp=$(echo "$result" | awk -F'|' '{print $3}')
+while IFS='|' read -r upstream udp tcp; do
+  [ -n "$upstream" ] || continue
 
   udp_class="fail"
   tcp_class="fail"
@@ -173,13 +335,32 @@ for server in $DNS_UPSTREAMS; do
     tcp_class="na"
   fi
 
-  echo "<tr><td>$upstream</td><td class='$udp_class'>$udp</td><td class='$tcp_class'>$tcp</td></tr>" >> "$OUTPUT_FILE"
-done
+  printf '<tr><td>%s</td><td><span class="status %s">%s</span></td><td><span class="status %s">%s</span></td></tr>\n' \
+    "$upstream" "$udp_class" "$udp" "$tcp_class" "$tcp" >> "$OUTPUT_FILE"
+done <<< "$DNS_RESULTS"
 
-echo "</table>
-<p>Report generated on: $(date)</p>
+cat >> "$OUTPUT_FILE" <<EOF
+</tbody></table></section>
+<section class="panel issue-panel"><div class="issue-heading"><h3>Issues</h3><span class="issue-status status $ISSUE_CLASS">$ISSUE_SUMMARY</span></div>
+EOF
+
+if [ "$ISSUE_COUNT" -gt 0 ]; then
+  printf '<ul class="issue-list">%s</ul>\n' "$ISSUE_ITEMS" >> "$OUTPUT_FILE"
+else
+  printf '<p class="empty-state">No active failed issues found.</p>\n' >> "$OUTPUT_FILE"
+fi
+
+if [ "$FAILED_CHECK_AVAILABLE" -eq 0 ]; then
+  printf '<p class="empty-state">Failed-service status is unavailable on this host.</p>\n' >> "$OUTPUT_FILE"
+fi
+
+cat >> "$OUTPUT_FILE" <<EOF
+</section>
+<footer>Report generated on $(date '+%Y-%m-%d %H:%M:%S %Z') · Refreshes every 30 seconds</footer>
+</main>
 </body>
-</html>" >> "$OUTPUT_FILE"
+</html>
+EOF
 
 # Set correct permissions
 chmod 644 "$OUTPUT_FILE"
