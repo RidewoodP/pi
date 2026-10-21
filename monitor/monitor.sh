@@ -79,6 +79,7 @@ echo "<html>
 <head>
 <title>System Monitoring Report</title>
 <meta charset='utf-8'>
+<link rel='icon' type='image/png' sizes='64x64' href='/images/favicon.png'>
 <meta http-equiv='refresh' content='30'>
 <style>
   body { font-family: Arial, sans-serif; margin: 20px; }
