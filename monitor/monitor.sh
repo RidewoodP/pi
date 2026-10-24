@@ -190,7 +190,7 @@ body { margin: 0; background: var(--canvas); color: var(--ink); font: 15px/1.5 "
 .brand-mark { color: #8ed9c4; font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
 .masthead h1 { margin: 2px 0 0; font-size: 20px; }
 main { max-width: 1400px; margin: 26px auto; padding: 0 20px 36px; }
-.page-nav { display: flex; justify-content: flex-end; margin-bottom: 14px; }
+.page-nav { display: flex; justify-content: flex-end; gap: 18px; margin-bottom: 14px; }
 .page-nav a { color: var(--teal); font-weight: 650; text-decoration-thickness: 1px; text-underline-offset: 3px; }
 .overview { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px 24px; margin-bottom: 18px; }
 .eyebrow { margin: 0 0 4px; color: var(--teal); font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
@@ -261,7 +261,7 @@ footer { margin-top: 14px; color: var(--muted); font-size: 12px; }
   <div><div class="brand-mark">Ridewood · Systems</div><h1>System monitor</h1></div>
 </header>
 <main>
-<nav class="page-nav" aria-label="Related pages"><a href="/network.html">Network inventory</a></nav>
+<nav class="page-nav" aria-label="Related pages"><a href="/network.html">Network inventory</a><a href="/power_calc/">Generator planner</a></nav>
 <section class="overview" aria-labelledby="host-heading">
   <div><p class="eyebrow">Live status</p><h2 id="host-heading">$HOSTNAME</h2><p class="uptime">Uptime: $UPTIME</p></div>
   <div class="health-pill $ISSUE_CLASS">$ISSUE_SUMMARY</div>

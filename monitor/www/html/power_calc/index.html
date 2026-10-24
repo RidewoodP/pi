@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#17211d">
+  <title>Wattwise | Generator planner</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="./" aria-label="Wattwise home">
+      <span class="brand-mark" aria-hidden="true">W</span>
+      <span>WATTWISE</span>
+    </a>
+    <div class="topbar-note"><span class="status-dot"></span> GENERATOR LOAD PLANNER</div>
+    <div class="topbar-actions">
+      <button class="icon-button" id="reload-button" type="button" title="Reload last saved list" aria-label="Reload last saved list" disabled>
+        <span aria-hidden="true">↻</span>
+      </button>
+      <button class="icon-button" id="reset-button" type="button" title="Clear appliance list" aria-label="Clear appliance list">
+        <span aria-hidden="true">×</span>
+      </button>
+    </div>
+    <h1 class="topbar-title" id="page-title">What do you need<br>to keep <span>running?</span></h1>
+  </header>
+
+  <main>
+    <section class="intro">
+      <p class="intro-copy">Build your load list. We’ll account for startup surge and give you a generator size to shop for.</p>
+    </section>
+
+    <section class="workspace" aria-label="Generator load calculator">
+      <div class="load-panel">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">01 / YOUR LOADS</p>
+            <h2>Appliances &amp; lights</h2>
+          </div>
+          <span class="item-count" id="item-count">0 ITEMS</span>
+        </div>
+
+        <div class="add-row">
+          <label class="sr-only" for="preset-select">Choose an appliance to add</label>
+          <select id="preset-select">
+            <option value="">Add a common appliance...</option>
+          </select>
+          <button class="button button-dark" id="add-button" type="button">Add load <span aria-hidden="true">+</span></button>
+        </div>
+
+        <div class="table-wrap">
+          <div class="load-table-head" aria-hidden="true">
+            <span>LOAD</span><span>QTY</span><span>RUN Watts</span><span>START Up multiplier</span><span></span>
+          </div>
+          <div id="load-list" class="load-list" aria-live="polite"></div>
+          <div id="empty-state" class="empty-state">
+            <span class="empty-mark" aria-hidden="true">＋</span>
+            <p>Your list is ready for its first load.</p>
+            <span>Pick an appliance above, or add a custom one.</span>
+          </div>
+        </div>
+
+        <button class="text-button" id="custom-button" type="button"><span aria-hidden="true">＋</span> Add a custom load</button>
+
+        <div class="start-mode">
+          <div>
+            <p class="mode-title">How will things start?</p>
+            <p class="mode-help">Choose whether motors start one at a time or all at once; simultaneous starts add their surges together.</p>
+          </div>
+          <div class="segmented" role="group" aria-label="Appliance startup timing">
+            <button type="button" data-start-mode="staggered" aria-pressed="true">One at a time</button>
+            <button type="button" data-start-mode="together" aria-pressed="false">All together</button>
+          </div>
+        </div>
+      </div>
+
+      <aside class="result-panel" aria-labelledby="result-title">
+        <div class="result-topline"><span class="result-icon" aria-hidden="true">ϟ</span><span>YOUR GENERATOR TARGET</span></div>
+        <p class="eyebrow result-eyebrow">RECOMMENDED MINIMUM</p>
+        <div class="recommendation"><span id="recommended-watts">0</span><span class="unit">W</span></div>
+        <p class="result-caption" id="result-title">Add loads to size your generator</p>
+        <div class="capacity-meter" aria-label="Recommended generator capacity breakdown">
+          <div class="meter-fill" id="meter-fill"></div>
+          <div class="meter-tick" aria-hidden="true"></div>
+        </div>
+        <div class="meter-labels"><span>RUNNING LOAD</span><span id="meter-percent">0%</span></div>
+        <div class="result-breakdown">
+          <div><span>Running watts</span><strong id="running-total">0 W</strong></div>
+          <div><span>Startup allowance</span><strong id="surge-total">0 W</strong></div>
+          <div><span>Safety margin</span><strong id="reserve-total">20%</strong></div>
+        </div>
+        <div class="recommendation-note" id="recommendation-note">A 20% headroom is included for a little breathing room.</div>
+        <p class="disclaimer">Estimates only. Check each appliance nameplate and the generator’s rated (continuous) output before buying.</p>
+      </aside>
+    </section>
+
+    <section class="shopping-panel" id="shopping-panel" aria-labelledby="shopping-title" hidden>
+      <div>
+        <p class="eyebrow">GENERATOR SHOPPING</p>
+        <h2 id="shopping-title">Search for at least <span id="shopping-watts">0</span> rated watts</h2>
+        <p class="shopping-note">Search results are not vetted recommendations. Check rated (continuous) output, startup capacity, fuel type, and voltage against your needs.</p>
+      </div>
+      <div class="shopping-actions">
+        <a class="button button-dark" id="amazon-search" href="https://www.amazon.co.uk/" target="_blank" rel="noopener noreferrer">Amazon UK <span aria-hidden="true">↗</span></a>
+        <a class="button button-dark" id="ebay-search" href="https://www.ebay.co.uk/" target="_blank" rel="noopener noreferrer">eBay UK <span aria-hidden="true">↗</span></a>
+      </div>
+    </section>
+
+    <footer class="page-footer"><span>WATTWISE / OFF-GRID PLANNING</span><span>STARTUP SURGE IS NOT THE SAME AS RUNNING WATTS</span></footer>
+  </main>
+
+  <dialog id="custom-dialog" class="custom-dialog">
+    <form method="dialog" id="custom-form">
+      <div class="dialog-heading">
+        <div><p class="eyebrow">NEW LOAD</p><h2>Add custom appliance</h2></div>
+        <button class="icon-button dialog-close" type="submit" value="cancel" aria-label="Close dialog">×</button>
+      </div>
+      <label>Appliance name<input name="name" required maxlength="48" placeholder="e.g. Workshop fan"></label>
+      <div class="dialog-fields">
+        <label>Running watts<input name="watts" type="number" min="1" max="100000" step="1" required value="500"></label>
+        <label>Startup multiplier<input name="surge" type="number" min="1" max="10" step="0.1" required value="1"></label>
+      </div>
+      <div class="dialog-actions"><button class="button button-light" type="submit" value="cancel">Cancel</button><button class="button button-dark" id="save-custom" type="button">Add to list</button></div>
+    </form>
+  </dialog>
+</body>
+</html>
