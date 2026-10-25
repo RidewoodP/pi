@@ -190,8 +190,12 @@ body { margin: 0; background: var(--canvas); color: var(--ink); font: 15px/1.5 "
 .brand-mark { color: #8ed9c4; font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
 .masthead h1 { margin: 2px 0 0; font-size: 20px; }
 main { max-width: 1400px; margin: 26px auto; padding: 0 20px 36px; }
-.page-nav { display: flex; justify-content: flex-end; gap: 18px; margin-bottom: 14px; }
-.page-nav a { color: var(--teal); font-weight: 650; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.masthead-actions { display: flex; align-items: center; gap: 12px; }
+.logout-button { min-height: 40px; padding: 8px 12px; border: 1px solid #8ed9c4; border-radius: 4px; background: transparent; color: #f5fbf8; cursor: pointer; font: inherit; }
+.logout-button:hover { background: #f5fbf81a; }
+.logout-button:focus-visible { outline: 2px solid #8ed9c4; outline-offset: 3px; }
+.logout-button:disabled { cursor: wait; opacity: .65; }
+.logout-status { color: #f5fbf8; font-size: 12px; }
 .overview { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px 24px; margin-bottom: 18px; }
 .eyebrow { margin: 0 0 4px; color: var(--teal); font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
 .overview h2 { margin: 0; font-size: 24px; }
@@ -259,9 +263,12 @@ footer { margin-top: 14px; color: var(--muted); font-size: 12px; }
 <body>
 <header class="masthead">
   <div><div class="brand-mark">Ridewood · Systems</div><h1>System monitor</h1></div>
+  <div class="masthead-actions">
+    <button class="logout-button" id="logout-button" type="button" hidden>Log off</button>
+    <span class="logout-status" id="logout-status" aria-live="polite"></span>
+  </div>
 </header>
 <main>
-<nav class="page-nav" aria-label="Related pages"><a href="/network.html">Network inventory</a><a href="/power_calc/">Generator planner</a></nav>
 <section class="overview" aria-labelledby="host-heading">
   <div><p class="eyebrow">Live status</p><h2 id="host-heading">$HOSTNAME</h2><p class="uptime">Uptime: $UPTIME</p></div>
   <div class="health-pill $ISSUE_CLASS">$ISSUE_SUMMARY</div>
@@ -433,6 +440,48 @@ cat >> "$OUTPUT_FILE" <<'SCRIPT'
   hoursSelect.addEventListener('change', saveSelection);
   samplesSelect.addEventListener('change', saveSelection);
   updateTrends();
+})();
+
+(() => {
+  const logoutButton = document.getElementById('logout-button');
+  const logoutStatus = document.getElementById('logout-status');
+  let csrfToken;
+
+  fetch('/netscan-api/token', { cache: 'no-store' })
+    .then(async (response) => {
+      if (response.status === 401) {
+        window.location.replace('/login.html?next=/');
+        return null;
+      }
+      if (!response.ok) throw new Error('Could not verify the session.');
+      return response.json();
+    })
+    .then((data) => {
+      if (!data) return;
+      csrfToken = data.token;
+      logoutButton.hidden = false;
+    })
+    .catch((error) => { logoutStatus.textContent = error.message; });
+
+  logoutButton.addEventListener('click', async () => {
+    logoutButton.disabled = true;
+    logoutStatus.textContent = 'Signing out';
+    try {
+      const response = await fetch('/netscan-api/logout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Netscan-CSRF': csrfToken,
+        },
+        body: '{}',
+      });
+      if (!response.ok) throw new Error('Could not end the session.');
+      window.location.replace('/login.html?next=/');
+    } catch (error) {
+      logoutStatus.textContent = error.message;
+      logoutButton.disabled = false;
+    }
+  });
 })();
 </script>
 </body>

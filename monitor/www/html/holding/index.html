@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f3f5ef">
+  <title>Ridewood | Coming soon</title>
+  <style>
+    :root { color-scheme: light; --paper: #f3f5ef; --ink: #15382f; --muted: #52685f; --line: #c7d1c7; --coral: #ca553b; --blue: #28677b; }
+    * { box-sizing: border-box; }
+    body { min-height: 100vh; margin: 0; color: var(--ink); background: repeating-linear-gradient(135deg, transparent 0 18px, rgba(21,56,47,.035) 18px 19px), var(--paper); font-family: "Avenir Next", Avenir, "Segoe UI", sans-serif; }
+    header, main, footer { width: min(100% - 48px, 1120px); margin-inline: auto; }
+    header { display: flex; justify-content: space-between; align-items: center; padding-block: 28px; border-bottom: 1px solid var(--line); font-size: 12px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+    .mark { color: var(--coral); }
+    .location { color: var(--muted); }
+    main { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(220px, .65fr); gap: 64px; align-items: end; padding-block: clamp(100px, 19vh, 190px) 100px; }
+    .eyebrow { margin: 0 0 22px; color: var(--blue); font-size: 12px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
+    h1 { max-width: 760px; margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: clamp(64px, 10vw, 128px); font-weight: 400; line-height: .92; }
+    .message { max-width: 340px; padding-bottom: 6px; }
+    .message p { margin: 0 0 28px; color: var(--muted); font-size: 18px; line-height: 1.55; }
+    nav { display: grid; gap: 14px; }
+    a { display: flex; justify-content: space-between; gap: 16px; padding-bottom: 10px; border-bottom: 1px solid var(--line); color: var(--ink); font-size: 15px; font-weight: 700; text-decoration: none; }
+    a::after { content: "↗"; color: var(--coral); }
+    a:hover, a:focus-visible { color: var(--coral); }
+    footer { display: flex; justify-content: space-between; padding-block: 18px 26px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+    @media (max-width: 680px) {
+      header, main, footer { width: min(100% - 36px, 1120px); }
+      main { grid-template-columns: 1fr; gap: 38px; padding-block: 100px 76px; }
+      h1 { font-size: clamp(58px, 18vw, 94px); }
+      .message p { font-size: 16px; }
+      footer { gap: 16px; flex-wrap: wrap; }
+    }
+  </style>
+</head>
+<body>
+  <header><span class="mark">Ridewood</span><span class="location">United Kingdom</span></header>
+  <main>
+    <section aria-labelledby="title">
+      <p class="eyebrow">A new home is taking shape</p>
+      <h1 id="title">Ridewood</h1>
+    </section>
+    <section class="message" aria-label="Site status">
+      <p>We’re getting things ready. In the meantime, these services are available.</p>
+      <nav aria-label="Ridewood services">
+        <a href="https://3days.ridewood.co.uk/">3 Days · Power Calc</a>
+        <a href="https://network.ridewood.co.uk/">Network · Netscan</a>
+        <a href="https://monitoring.ridewood.co.uk/">Monitoring · System status</a>
+      </nav>
+    </section>
+  </main>
+  <footer><span>Ridewood</span><span>More soon.</span></footer>
+</body>
+</html>

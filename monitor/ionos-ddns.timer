@@ -1,0 +1,12 @@
+[Unit]
+Description=Check Ridewood's public IPv4 for IONOS DNS updates
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+AccuracySec=1min
+Persistent=yes
+Unit=ionos-ddns.service
+
+[Install]
+WantedBy=timers.target

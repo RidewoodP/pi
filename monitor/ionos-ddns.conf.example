@@ -1,0 +1,2 @@
+# Add the IONOS API key (prefix.secret) here using sudoedit.
+IONOS_API_KEY=
