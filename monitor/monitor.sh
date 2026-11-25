@@ -7,14 +7,108 @@ OUTPUT_FILE="/opt/monitoring/www/html/index.html"
 DNS_UPSTREAMS="208.67.222.222 1.1.1.1 9.9.9.9"
 METRICS_LOG="/opt/monitoring/www/html/metrics.log"
 
-append_throttle_message() {
-  local target_var="$1"
-  local mask="$2"
-  local text="$3"
+temperature_celsius() {
+  local millidegrees="$1"
 
-  if (( THROTTLE_DEC & mask )); then
-    printf -v "$target_var" '%s%s\n' "${!target_var}" "$text"
-  fi
+  [[ "$millidegrees" =~ ^-?[0-9]+$ ]] || return 1
+  awk -v value="$millidegrees" 'BEGIN { printf "%.1f", value / 1000 }'
+}
+
+read_cpu_temperature() {
+  local hwmon sensor input label_file label raw value fallback
+
+  for hwmon in /sys/class/hwmon/hwmon*; do
+    [[ -r "$hwmon/name" ]] || continue
+    read -r sensor < "$hwmon/name" || continue
+
+    case "$sensor" in
+      coretemp|k10temp|zenpower|cpu_thermal)
+        fallback=""
+        for input in "$hwmon"/temp*_input; do
+          [[ -r "$input" ]] || continue
+          raw=$(<"$input")
+          value=$(temperature_celsius "$raw") || continue
+          label_file="${input%_input}_label"
+          label=""
+          if [[ -r "$label_file" ]]; then
+            read -r label < "$label_file" || true
+          fi
+
+          if [[ "$label" =~ (Package|Tctl|Tdie|CPU) ]]; then
+            printf '%s|CPU package sensor (%s)\n' "$value" "$sensor"
+            return 0
+          fi
+          if [[ -z "$fallback" ]]; then
+            fallback="$value"
+          fi
+        done
+
+        if [[ -n "$fallback" ]]; then
+          printf '%s|CPU sensor (%s)\n' "$fallback" "$sensor"
+          return 0
+        fi
+        ;;
+    esac
+  done
+
+  for zone in /sys/class/thermal/thermal_zone*; do
+    [[ -r "$zone/type" && -r "$zone/temp" ]] || continue
+    read -r sensor < "$zone/type" || continue
+    case "$sensor" in
+      x86_pkg_temp|cpu-thermal|cpu_thermal|cpu)
+        raw=$(<"$zone/temp")
+        value=$(temperature_celsius "$raw") || continue
+        printf '%s|Kernel thermal zone (%s)\n' "$value" "$sensor"
+        return 0
+        ;;
+    esac
+  done
+
+  return 1
+}
+
+read_storage_temperature() {
+  local hwmon sensor input label_file label raw value fallback
+
+  for hwmon in /sys/class/hwmon/hwmon*; do
+    [[ -r "$hwmon/name" ]] || continue
+    read -r sensor < "$hwmon/name" || continue
+
+    case "$sensor" in
+      nvme|drivetemp)
+        fallback=""
+        for input in "$hwmon"/temp*_input; do
+          [[ -r "$input" ]] || continue
+          raw=$(<"$input")
+          value=$(temperature_celsius "$raw") || continue
+          label_file="${input%_input}_label"
+          label=""
+          if [[ -r "$label_file" ]]; then
+            read -r label < "$label_file" || true
+          fi
+
+          if [[ "$sensor" == "nvme" && "$label" == "Composite" ]]; then
+            printf '%s|NVMe composite sensor\n' "$value"
+            return 0
+          fi
+          if [[ -z "$fallback" ]]; then
+            fallback="$value"
+          fi
+        done
+
+        if [[ -n "$fallback" ]]; then
+          printf '%s|Storage sensor (%s)\n' "$fallback" "$sensor"
+          return 0
+        fi
+        ;;
+    esac
+  done
+
+  return 1
+}
+
+html_escape() {
+  printf '%s' "$1" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g'
 }
 
 check_dns() {
@@ -83,36 +177,35 @@ UPTIME=$(uptime -p)
 CPU_LOAD=$(uptime | sed 's/.*load average: //')
 MEMORY_USAGE=$(free -m | awk 'NR==2{printf "%.2f%%", $3*100/$2 }')
 DISK_USAGE=$(df -h / | awk 'NR==2 {print $5}')
-PI_TEMP=$(vcgencmd measure_temp | cut -d'=' -f2 | cut -d"'" -f1)
-PI_VOLT=$(vcgencmd measure_volts core | cut -d'=' -f2 | cut -d'V' -f1)
-NETWORK_INTERFACES=$(ip -o -4 addr show | awk '$2 == "wlan0" || $2 == "eth0" {print $2 " " $4}')
-THROTTLE_RAW=$(vcgencmd get_throttled 2>/dev/null)
-THROTTLE_HEX=$(echo "$THROTTLE_RAW" | sed -n 's/.*throttled=\(0x[0-9a-fA-F]*\).*/\1/p')
+CPU_MODEL=$(awk -F: '/^model name[[:space:]]*:/ { sub(/^[[:space:]]*/, "", $2); print $2; exit }' /proc/cpuinfo)
+CPU_MODEL=${CPU_MODEL:-$(uname -m)}
+OS_NAME=$(. /etc/os-release && printf '%s' "${PRETTY_NAME:-Linux}")
+ARCHITECTURE=$(uname -m)
+KERNEL_VERSION=$(uname -r)
+CPU_MODEL=$(html_escape "$CPU_MODEL")
+OS_NAME=$(html_escape "$OS_NAME")
+ARCHITECTURE=$(html_escape "$ARCHITECTURE")
+KERNEL_VERSION=$(html_escape "$KERNEL_VERSION")
 
-if [ -n "$THROTTLE_HEX" ]; then
-  THROTTLE_DEC=$((THROTTLE_HEX))
-else
-  THROTTLE_DEC=0
-  THROTTLE_HEX="0x0"
+CPU_TEMP="N/A"
+CPU_TEMP_DETAIL="No CPU temperature sensor detected"
+CPU_TEMP_DISPLAY="N/A"
+if CPU_TEMP_READING=$(read_cpu_temperature); then
+  IFS='|' read -r CPU_TEMP CPU_TEMP_DETAIL <<< "$CPU_TEMP_READING"
+  CPU_TEMP_DISPLAY="$CPU_TEMP <span>°C</span>"
 fi
+CPU_TEMP_DETAIL=$(html_escape "$CPU_TEMP_DETAIL")
 
-THROTTLE_CURRENT=""
-THROTTLE_HISTORY=""
-append_throttle_message THROTTLE_CURRENT $((1 << 0)) "Under-voltage detected now"
-append_throttle_message THROTTLE_CURRENT $((1 << 1)) "Arm frequency capped now"
-append_throttle_message THROTTLE_CURRENT $((1 << 2)) "Currently throttled"
-append_throttle_message THROTTLE_CURRENT $((1 << 3)) "Soft temperature limit active now"
-append_throttle_message THROTTLE_HISTORY $((1 << 16)) "Under-voltage has occurred since boot"
-append_throttle_message THROTTLE_HISTORY $((1 << 17)) "Arm frequency capping has occurred since boot"
-append_throttle_message THROTTLE_HISTORY $((1 << 18)) "Throttling has occurred since boot"
-append_throttle_message THROTTLE_HISTORY $((1 << 19)) "Soft temperature limit has occurred since boot"
-
-THROTTLE_SUMMARY="No throttling detected"
-if [ -n "$THROTTLE_CURRENT" ]; then
-  THROTTLE_SUMMARY="Active throttling or power issue"
-elif [ -n "$THROTTLE_HISTORY" ]; then
-  THROTTLE_SUMMARY="No active issue, but historical events recorded"
+STORAGE_TEMP="N/A"
+STORAGE_TEMP_DETAIL="No storage temperature sensor detected"
+STORAGE_TEMP_DISPLAY="N/A"
+if STORAGE_TEMP_READING=$(read_storage_temperature); then
+  IFS='|' read -r STORAGE_TEMP STORAGE_TEMP_DETAIL <<< "$STORAGE_TEMP_READING"
+  STORAGE_TEMP_DISPLAY="$STORAGE_TEMP <span>°C</span>"
 fi
+STORAGE_TEMP_DETAIL=$(html_escape "$STORAGE_TEMP_DETAIL")
+
+NETWORK_INTERFACES=$(ip -o -4 addr show | awk '$2 != "lo" {print $2 " " $4}')
 
 TREND_CUTOFF=$(date -d '24 hours ago' '+%Y-%m-%d %H:%M:%S')
 TREND_TIMEZONE=$(date '+%:z')
@@ -127,7 +220,6 @@ if command -v systemctl >/dev/null 2>&1; then
   FAILED_UNITS=$(systemctl --failed --no-legend --plain --no-pager 2>/dev/null | awk 'NF {print $1}')
 fi
 FAILED_COUNT=$(printf '%s\n' "$FAILED_UNITS" | awk 'NF {count++} END {print count+0}')
-THROTTLE_ISSUE_COUNT=$(printf '%s\n' "$THROTTLE_CURRENT" | awk 'NF {count++} END {print count+0}')
 
 DNS_RESULTS=""
 DNS_ISSUE_ITEMS=""
@@ -145,7 +237,7 @@ for server in $DNS_UPSTREAMS; do
   fi
 done
 
-ISSUE_COUNT=$((FAILED_COUNT + THROTTLE_ISSUE_COUNT + DNS_FAILURE_COUNT))
+ISSUE_COUNT=$((FAILED_COUNT + DNS_FAILURE_COUNT))
 ISSUE_CLASS="healthy"
 ISSUE_SUMMARY="No active failed issues"
 if [ "$ISSUE_COUNT" -gt 0 ]; then
@@ -160,18 +252,9 @@ while IFS= read -r failed_unit; do
   FAILED_UNIT_ITEMS+="<li>Failed systemd unit: <code>$safe_unit</code></li>"
 done <<< "$FAILED_UNITS"
 
-ISSUE_ITEMS=""
-while IFS= read -r throttle_msg; do
-  [ -n "$throttle_msg" ] && ISSUE_ITEMS+="<li>$throttle_msg</li>"
-done <<< "$THROTTLE_CURRENT"
-ISSUE_ITEMS+="$FAILED_UNIT_ITEMS$DNS_ISSUE_ITEMS"
+ISSUE_ITEMS="$FAILED_UNIT_ITEMS$DNS_ISSUE_ITEMS"
 
 # Start HTML content
-THROTTLE_CLASS="healthy"
-if [ -n "$THROTTLE_CURRENT" ]; then
-  THROTTLE_CLASS="warning"
-fi
-
 cat > "$OUTPUT_FILE" <<EOF
 <!doctype html>
 <html lang="en">
@@ -234,10 +317,8 @@ main { max-width: 1400px; margin: 26px auto; padding: 0 20px 36px; }
 .panel-intro { margin: -5px 0 12px; color: var(--muted); font-size: 13px; }
 .raw-status { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 0 0 14px; color: var(--muted); font-size: 13px; }
 code { padding: 2px 5px; border-radius: 3px; background: #f0f4f2; font: 12px/1.4 ui-monospace, SFMono-Regular, Consolas, monospace; }
-.flag-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-.flag-grid h4 { margin: 0 0 6px; color: var(--muted); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
-.flag-grid ul, .interface-list { margin: 0; padding-left: 18px; }
-.flag-grid li, .interface-list li { margin: 4px 0; }
+.interface-list { margin: 0; padding-left: 18px; }
+.interface-list li { margin: 4px 0; }
 .empty-state { color: var(--muted); }
 .dns-panel { margin-top: 14px; }
 .issue-panel { margin-top: 14px; }
@@ -257,7 +338,7 @@ tbody tr:last-child td { border-bottom: 0; }
 .na { color: var(--muted); }
 footer { margin-top: 14px; color: var(--muted); font-size: 12px; }
 @media (max-width: 900px) { .metric-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-@media (max-width: 640px) { .masthead { min-height: 145px; padding: 18px 16px; background-size: auto, 100% auto; } .masthead h1 { font-size: 18px; } main { margin: 18px auto; padding: 0 14px 24px; } .overview h2 { font-size: 21px; } .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; } .metric { padding: 12px; } .metric-value { font-size: 19px; } .detail-grid, .trend-grid { grid-template-columns: 1fr; } .flag-grid { grid-template-columns: 1fr; } .dns-panel { overflow-x: auto; } .dns-panel table { min-width: 460px; } }
+@media (max-width: 640px) { .masthead { min-height: 145px; padding: 18px 16px; background-size: auto, 100% auto; } .masthead h1 { font-size: 18px; } main { margin: 18px auto; padding: 0 14px 24px; } .overview h2 { font-size: 21px; } .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; } .metric { padding: 12px; } .metric-value { font-size: 19px; } .detail-grid, .trend-grid { grid-template-columns: 1fr; } .dns-panel { overflow-x: auto; } .dns-panel table { min-width: 460px; } }
 </style>
 </head>
 <body>
@@ -277,8 +358,8 @@ footer { margin-top: 14px; color: var(--muted); font-size: 12px; }
   <article class="metric"><div class="metric-label">CPU load</div><div class="metric-value">$CPU_LOAD</div><div class="metric-detail">1, 5 and 15 minute averages</div></article>
   <article class="metric"><div class="metric-label">Memory used</div><div class="metric-value">$MEMORY_USAGE</div><div class="metric-detail">Physical memory</div></article>
   <article class="metric"><div class="metric-label">Root disk used</div><div class="metric-value">$DISK_USAGE</div><div class="metric-detail">Root partition</div></article>
-  <article class="metric"><div class="metric-label">Temperature</div><div class="metric-value">$PI_TEMP <span>°C</span></div><div class="metric-detail">Board temperature</div></article>
-  <article class="metric"><div class="metric-label">Core voltage</div><div class="metric-value">$PI_VOLT <span>V</span></div><div class="metric-detail">Core rail</div></article>
+  <article class="metric"><div class="metric-label">CPU temperature</div><div class="metric-value">$CPU_TEMP_DISPLAY</div><div class="metric-detail">$CPU_TEMP_DETAIL</div></article>
+  <article class="metric"><div class="metric-label">Storage temperature</div><div class="metric-value">$STORAGE_TEMP_DISPLAY</div><div class="metric-detail">$STORAGE_TEMP_DETAIL</div></article>
 </section>
 <section class="panel trend-panel"><div class="trend-heading"><h3>Recent trends</h3>
 <div class="trend-controls">
@@ -292,40 +373,8 @@ footer { margin-top: 14px; color: var(--muted); font-size: 12px; }
   <article class="trend-card"><div class="trend-label">Root disk used</div>$DISK_TREND</article>
 </div></section>
 <section class="detail-grid">
-  <article class="panel"><h3>Power and throttling</h3>
-    <p class="raw-status"><span>Raw status <code>$THROTTLE_HEX</code></span><span class="status $THROTTLE_CLASS">$THROTTLE_SUMMARY</span></p>
-    <div class="flag-grid">
-      <section><h4>Active now</h4><ul>
-EOF
-
-if [ -n "$THROTTLE_CURRENT" ]; then
-  while IFS= read -r throttle_msg; do
-    [ -n "$throttle_msg" ] && printf '<li>%s</li>\n' "$throttle_msg" >> "$OUTPUT_FILE"
-  done <<EOF
-$THROTTLE_CURRENT
-EOF
-else
-  printf '<li class="empty-state">No active flags</li>\n' >> "$OUTPUT_FILE"
-fi
-
-cat >> "$OUTPUT_FILE" <<EOF
-      </ul></section>
-      <section><h4>Since boot</h4><ul>
-EOF
-
-if [ -n "$THROTTLE_HISTORY" ]; then
-  while IFS= read -r throttle_msg; do
-    [ -n "$throttle_msg" ] && printf '<li>%s</li>\n' "$throttle_msg" >> "$OUTPUT_FILE"
-  done <<EOF
-$THROTTLE_HISTORY
-EOF
-else
-  printf '<li class="empty-state">No historical flags</li>\n' >> "$OUTPUT_FILE"
-fi
-
-cat >> "$OUTPUT_FILE" <<EOF
-      </ul></section>
-    </div>
+  <article class="panel"><h3>Host details</h3>
+    <p class="raw-status"><span>Processor <code>$CPU_MODEL</code></span><span>Operating system <code>$OS_NAME</code></span><span>Architecture <code>$ARCHITECTURE</code></span><span>Kernel <code>$KERNEL_VERSION</code></span></p>
   </article>
   <article class="panel"><h3>Network interfaces</h3><ul class="interface-list">
 EOF

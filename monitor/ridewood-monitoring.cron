@@ -1,0 +1,6 @@
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+*/5 * * * * paddee /opt/ridewood/pi/monitor/monitor.sh
+*/10 * * * * paddee /opt/ridewood/pi/monitor/monitor_grph.sh && /opt/ridewood/pi/monitor/csv_to_json.py
+30 5-23 * * * paddee NETSCAN_CONFIG=/etc/netscan/netscan.json /opt/ridewood/netscan/network_scan.sh -q -p 1000 > /tmp/net_scan.log 2>&1
